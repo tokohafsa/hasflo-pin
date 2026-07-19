@@ -269,7 +269,7 @@ st.divider()
 # ============================================================
 
 st.subheader("Step 1B — 🔗 Link Affiliate Shopee *(opsional)*")
-st.caption("Akan disertakan di deskripsi.txt dalam ZIP untuk agent Pinterest.")
+st.caption("Akan disertakan di deskripsi.txt dalam folder `ready_pin/` di Dropbox untuk agent Pinterest.")
 
 shopee_affiliate_link = st.text_input(
     "Link affiliate Shopee:",
@@ -858,7 +858,13 @@ if st.session_state.get("last_prompt_json"):
                 f"✅ `bahan_prompt/` terupload ke Dropbox! ({len(uploads)} file) → "
                 f"`{DROPBOX_FOLDER.rstrip('/')}/{folder_name}/bahan_prompt/`"
             )
-            st.caption("Sekarang buka Dropbox → upload ke GPT → dapat hasil gambar → balik ke sini untuk Step 8.")
+            st.link_button(
+                "🤖 Buka ChatGPT — siap upload file",
+                "https://chatgpt.com/",
+                use_container_width=True,
+                type="primary",
+            )
+            st.caption("Buka Dropbox → ambil file dari `bahan_prompt/` → upload ke ChatGPT → paste prompt.txt → balik ke sini untuk Step 8.")
 
 # ============================================================
 # STEP 8 — UPLOAD HASIL GPT → READY PIN
@@ -965,6 +971,11 @@ else:
                     errors_rp.append(f"image{idx}: {e}")
 
             # ── Upload deskripsi.txt ───────────────────────
+            # Format 4 baris flat untuk agent automation:
+            # Line 1: board/section
+            # Line 2: judul Pinterest generated
+            # Line 3: deskripsi Pinterest generated
+            # Line 4: link affiliate Shopee
             step_rp += 1
             _prog2.progress(int(step_rp / total_rp * 100), text="Upload deskripsi.txt...")
             desc_lines = [
