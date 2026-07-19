@@ -4,7 +4,7 @@
 
 
 # ── CREDENTIALS & CONFIG ────────────────────────────────────
-config.py
+secrets.py
 secrets.toml
 .env
 *.env
