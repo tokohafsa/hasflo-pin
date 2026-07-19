@@ -29,8 +29,9 @@ def _get(key: str, default=None):
 
 
 AI_ENABLED            = _get(True, False)
-AI_MODEL            = _get("AI_MODEL", "")
+AI_MODEL              = _get("AI_MODEL", "")
 AI_API_KEY            = _get("AI_API_KEY", "")
 DROPBOX_APP_KEY       = _get("DROPBOX_APP_KEY", "")
 DROPBOX_APP_SECRET    = _get("DROPBOX_APP_SECRET", "")
 DROPBOX_REFRESH_TOKEN = _get("DROPBOX_REFRESH_TOKEN", "")
+DROPBOX_FOLDER        = _get("DROPBOX_FOLDER", "")
