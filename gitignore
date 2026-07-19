@@ -1,0 +1,64 @@
+# ============================================================
+# HASFLO PINTEREST — .gitignore
+# ============================================================
+
+
+# ── CREDENTIALS & CONFIG ────────────────────────────────────
+secrets.py
+secrets.toml
+.env
+*.env
+.env.*
+
+
+# ── OUTPUT & TEMPORARY FILES ────────────────────────────────
+output/
+*.zip
+*.csv
+
+
+# ── PYTHON ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+
+# ── VIRTUAL ENV / CONDA ─────────────────────────────────────
+env/
+venv/
+.venv/
+env_main/
+*.egg-info/
+
+
+# ── STREAMLIT ───────────────────────────────────────────────
+.streamlit/secrets.toml
+
+
+# ── PLAYWRIGHT ──────────────────────────────────────────────
+playwright-report/
+test-results/
+
+
+# ── OS FILES ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+
+# ── IDE ─────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.code-workspace
+
+
+# ── LOGS ────────────────────────────────────────────────────
+*.log
+logs/
+
+
+# ── JUPYTER (jika ada) ──────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
