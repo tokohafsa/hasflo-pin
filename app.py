@@ -373,7 +373,7 @@ if st.session_state.get("_judul_checked"):
     if st.button("✨ Generate Judul & Deskripsi", key="btn_gen_titledesc", type="primary"):
         with st.spinner("Generating via Gemini..."):
             try:
-                from config import AI_API_KEY, AI_MODEL
+                from _credentials import AI_API_KEY, AI_MODEL
                 from google import genai
 
                 client = genai.Client(api_key=AI_API_KEY)
@@ -737,7 +737,7 @@ if st.session_state.get("last_prompt_json"):
         from dropbox_client import upload_bytes as _dbx_upload_bytes, _get_access_token as _dbx_token
 
         try:
-            from config import (
+            from _credentials import (
                 DROPBOX_APP_KEY,
                 DROPBOX_APP_SECRET,
                 DROPBOX_REFRESH_TOKEN,
@@ -912,7 +912,7 @@ else:
             from dropbox_client import upload_bytes as _dbx_upload_bytes, _get_access_token as _dbx_token
 
             try:
-                from config import (
+                from _credentials import (
                     DROPBOX_APP_KEY,
                     DROPBOX_APP_SECRET,
                     DROPBOX_REFRESH_TOKEN,
