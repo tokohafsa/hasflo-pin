@@ -1,0 +1,15 @@
+{
+  "name": "layout7",
+  "order": 7,
+  "n_photo_slots": 5,
+  "description": "three-zone vertical layout: top zone single large photo with torn paper edges floating above floral decoration background, middle zone horizontal Kodak Porta film strip with 3 small photos side by side and film label at bottom, bottom zone single large photo with torn paper edges, entire composition scattered with decorative sticker elements of varying sizes — analyze the outfit aesthetic and vibe from the uploaded image and choose matching sticker elements (e.g. soft feminine/floral outfit → holographic butterfly, bow, and heart stickers; Y2K/baddie outfit → holographic star, lightning bolt, and gem stickers; dark/edgy outfit → crescent moon, skull, and crystal stickers; cottagecore/floral outfit → pressed flower, ladybug, and mushroom stickers; sporty/streetwear outfit → flame, star, and checkered flag stickers; pastel/kawaii outfit → cloud, rainbow, and candy stickers), Y2K girly aesthetic. The layout contains 5 distinct photo slots arranged as described in the reference image — follow the exact number, shape, and arrangement of photo slots shown in the layout reference.",
+  "tags": [
+    "film",
+    "y2k",
+    "holographic",
+    "sticker",
+    "adaptive",
+    "girly"
+  ],
+  "swipe_cta": "Add a small holographic badge or film-style label containing a short swipe-related CTA (such as 'Swipe →' or another concise variation). Decorate it with sticker elements that match the detected outfit aesthetic — holographic stars and sparkles for Y2K/baddie, butterflies and hearts for soft feminine, moons and crystals for dark/edgy, or flowers and mushrooms for cottagecore. Keep it playful and naturally fitting the collage."
+}

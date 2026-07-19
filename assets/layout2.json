@@ -1,0 +1,14 @@
+{
+  "name": "layout2",
+  "order": 2,
+  "n_photo_slots": 4,
+  "description": "aesthetic phone-UI mashup collage, soft white/cream outfit theme, daily life journal style. Y2K/soft-girl aesthetic, overlapping app screenshot mockups mixed with real photos. Composition takes place in muted grey/beige textured background (looks like blurred laptop keyboard or table surface). The layout contains 4 distinct photo slots arranged as described in the reference image — follow the exact number, shape, and arrangement of photo slots shown in the layout reference.",
+  "tags": [
+    "phone-ui",
+    "soft-girl",
+    "minimal",
+    "neutral",
+    "modern"
+  ],
+  "swipe_cta": "Add a small phone-UI style widget containing a short swipe-related CTA (such as 'Swipe →' or another concise variation). Keep the wording brief and natural. Blend it seamlessly into the interface aesthetic using subtle gesture arrows, UI indicators, or navigation cues."
+}

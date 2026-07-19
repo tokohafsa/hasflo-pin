@@ -1,0 +1,26 @@
+# ============================================================
+# HASFLO PINTEREST — requirements.txt
+# Streamlit Cloud deployment
+# ============================================================
+
+# ── CORE APP ────────────────────────────────────────────────
+streamlit>=1.35.0
+
+# ── AI / GEMINI ─────────────────────────────────────────────
+google-genai>=1.0.0
+
+# ── DROPBOX ─────────────────────────────────────────────────
+dropbox>=12.0.0
+
+# ── HTTP / IMAGE FETCH ──────────────────────────────────────
+requests>=2.31.0
+
+# ── SCRAPER (Playwright) ────────────────────────────────────
+# CATATAN: Playwright tidak bisa jalan di Streamlit Cloud
+# (tidak ada browser binary). Scraper harus dijalankan lokal.
+# Baris ini untuk dokumentasi dependency lokal saja.
+# playwright>=1.44.0
+
+# ── DATA / UTILITY ──────────────────────────────────────────
+Pillow>=10.0.0
+python-dateutil>=2.8.0

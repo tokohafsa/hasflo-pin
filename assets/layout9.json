@@ -1,0 +1,18 @@
+{
+  "name": "layout9",
+  "order": 9,
+  "n_photo_slots": 5,
+  "description": "vintage scrapbook fashion collage / Pinterest product showcase layout. Analyze the outfit from the uploaded image and extract the dominant color palette and aesthetic vibe — use these to define the layout's accent tones and decorative elements. Warm beige and cream paper-craft aesthetic as base with soft earthy tones, cozy indoor bedroom lighting, romantic lifestyle atmosphere; adapt accent colors to complement the outfit's dominant hue (e.g. floral/feminine outfit → blush or dusty rose accents; earthy/cottagecore outfit → sage or terracotta accents; dark/moody outfit → deep wine or charcoal accents; pastel outfit → soft lavender or mint accents; neutral/cream outfit → keep original warm beige and cream theme). Background consists of layered kraft paper textures, torn notebook paper, masking tape pieces, folded paper edges, and subtle stationery elements. The layout contains 5 distinct Polaroid-style photo slots arranged asymmetrically around a large central cutout subject. One vertical Polaroid photo on the upper left, one vertical full-body Polaroid photo at the upper center, one vertical back-view Polaroid photo on the upper right, one tilted Polaroid photo on the lower left, and one close-up detail Polaroid photo on the lower right. The main subject is placed prominently in the center with a white sticker-cut outline effect. Decorative elements include hand-drawn doodles and sketch lines in the detected accent color, paper clips, ribbon string, a vintage retro prop — detect the outfit vibe and choose a fitting decorative object (e.g. cottagecore/feminine outfit → vintage telephone; dark academic outfit → typewriter or inkwell; soft girly outfit → vanity mirror or music box; Y2K/playful outfit → cassette tape or retro camera; sporty/casual outfit → retro radio or instant camera), torn paper labels, and handwritten scrapbook accents. Soft warm filter, feminine fashion catalog mood, clean product-focused composition, cozy cottagecore and journaling aesthetic. Follow the exact number, shape, size hierarchy, and arrangement of photo slots shown in the layout reference.",
+  "tags": [
+    "scrapbook",
+    "polaroid",
+    "fashion",
+    "vintage",
+    "cottagecore",
+    "papercraft",
+    "lifestyle",
+    "pinterest",
+    "adaptive"
+  ],
+  "swipe_cta": "Add a small torn-paper label or vintage tape sticker containing a short swipe-related CTA (such as 'Swipe →' or a similar concise variation). Keep the wording brief and natural. Blend it seamlessly into the scrapbook composition with hand-drawn doodles in the detected accent color, paper textures, and stationery-style decorations matching the overall vintage aesthetic."
+}

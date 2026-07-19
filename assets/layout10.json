@@ -1,0 +1,17 @@
+{
+  "name": "layout10",
+  "order": 10,
+  "n_photo_slots": 4,
+  "description": "urban Y2K social media collage / Instagram story aesthetic. Soft muted city street photography with dreamy gray-green tones, candid lifestyle atmosphere, and nostalgic early-2000s mobile interface design. The layout contains 4 distinct photo slots arranged around the canvas: one large full-body portrait on the upper left, one medium portrait on the upper right, one medium full-body pose on the lower left, and one oversized torn-paper cutout photo occupying the lower right section. Decorative overlays include realistic smartphone UI elements, messaging notifications, chat bubbles, camera menu panels, social media controls, music player wireframe graphics, handwritten note stickers, torn paper textures, and floating interface windows. Use layered transparent UI components to create an authentic screenshot-inspired collage aesthetic. Soft natural daylight, candid street-style fashion photography, minimal color palette, trendy Gen-Z visual identity, and nostalgic digital diary mood. Follow the exact number, shape, scale hierarchy, and arrangement of photo slots shown in the layout reference.",
+  "tags": [
+    "y2k",
+    "urban",
+    "instagram",
+    "story",
+    "streetstyle",
+    "socialmedia",
+    "collage",
+    "digitaldiary"
+  ],
+  "swipe_cta": "Add a small floating mobile-style notification, message bubble, or interface sticker containing a short swipe-related CTA (such as 'Swipe →' or a similar concise variation). Keep the wording brief and natural. Integrate it seamlessly with the existing smartphone UI overlays, chat elements, and digital scrapbook aesthetic."
+}

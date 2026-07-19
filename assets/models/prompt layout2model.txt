@@ -1,0 +1,1 @@
+Edit gambar pertama menggunakan gambar kedua sebagai referensi model. Ganti seluruh model pada semua foto di kolase menjadi sesuai referensi (wajah, proporsi, dan tone kulit konsisten), pertahankan layout, outfit, semua elemen desain, dan ukuran layout. Jangan mengubah komposisi selain identitas model.

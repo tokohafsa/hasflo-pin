@@ -1,0 +1,222 @@
+# HASFLO — MEMORY CROSS-SESSION
+# Dropbox + Pinterest Agent Upgrade Plan
+# Terakhir diupdate: 19 Juli 2026
+# ============================================================
+
+
+## STATUS PROYEK
+app.py v2 sudah di-rebuild + direfactor (19 Juli 2026).
+Dropbox client sudah dibuat dan diintegrasikan ke app.py.
+Step 7 & 8 sudah dipisah (bahan_prompt vs ready_pin).
+Streamlit Cloud migration (Fase 3): BELUM DIMULAI.
+Agent Pinterest (Fase 4): BELUM DIMULAI.
+
+
+## PIPELINE LENGKAP
+
+[Shopee]
+  ↓
+HAS_flo app — input URL + generate prompt
+  ↓
+Step 7 — Upload bahan_prompt/ ke Dropbox /HASflo/[folder]/bahan_prompt/
+  ↓
+[Manual] Buka Dropbox → upload bahan ke GPT (ChatGPT/Gemini)
+  ↓
+[Manual] Download hasil GPT → balik ke app (SESI SAMA)
+  ↓
+Step 8 — Drag-drop hasil GPT → preview slide order → Upload ready_pin/ ke Dropbox
+  ↓
+Agent — monitor ready_pin/ → post Pinterest carousel
+  ↓
+[Pinterest] Pin carousel live
+
+
+## FILE & STRUKTUR PROYEK
+
+File utama:
+- app.py            ← Streamlit UI (997 baris, v2 final)
+- image_generator.py ← build_prompt_json, LAYOUT_OPTIONS, CANVAS_OPTIONS
+- dropbox_client.py  ← Dropbox OAuth2 wrapper (upload_bytes, _get_access_token, dll)
+- config.py          ← settings & credentials
+
+Folder runtime (tidak di-commit):
+- assets/           ← layout JSON + preview JPG + models/
+- assets/models/    ← model reference images (filter hijab/non-hijab dari nama file)
+- output/           ← SUDAH DIHAPUS, tidak dipakai lagi
+
+config.py isi saat ini:
+    AI_ENABLED = True
+    AI_API_KEY = ""
+    AI_MODEL = "gemini-3.1-flash-lite"
+    AI_IMAGE_MODEL = "gemini-3.1-flash-image"
+    DROPBOX_APP_KEY = ""
+    DROPBOX_APP_SECRET = ""
+    DROPBOX_REFRESH_TOKEN = ""
+    DROPBOX_FOLDER = "/HASflo"
+    OUTPUT_DIR sudah dihapus
+
+
+## STRUKTUR DROPBOX
+
+/HASflo/[ratio]judul_YYYYMMDD/
+    bahan_prompt/
+        _model_ref.jpg          ← model ref (prefix _ agar urutan pertama alfabet)
+        image2.jpg, image3.jpg  ← outfit refs (nomor GPT-order, mulai 2 jika model aktif)
+        layout.jpg
+        prompt.txt
+    ready_pin/
+        slides/
+            slide1.png          ← hasil GPT, SELALU dinamai slide1.<ext> oleh app
+        image1.jpg, image2.jpg  ← outfit refs (selalu mulai 1, tanpa model ref)
+        deskripsi.txt
+
+CATATAN:
+- Nama folder = [ratio]judul_sanitized_YYYYMMDD
+- Ratio dari canvas yang dipilih user (contoh: [2x3], [3x4])
+- ZIP sudah dihapus — upload langsung ke Dropbox
+- CARA_UPLOAD.txt sudah dihapus — tidak dibaca agent
+- bahan_prompt/ diupload di Step 7
+- ready_pin/ diupload di Step 8 (sesi sama, setelah dapat hasil GPT)
+
+
+## FORMAT deskripsi.txt (4 BARIS BERSIH — UNTUK AGENT)
+
+Baris 1: board/section          contoh: Fashion Outfit Hijab Motif Bunga/Dress
+Baris 2: judul pin (generated)  contoh: Dress Motif Bunga Midi Rayon Lengan Panjang
+Baris 3: deskripsi pin          contoh: Dress bermotif bunga dengan bahan rayon...
+Baris 4: link affiliate         contoh: https://shope.ee/xxxx
+
+Format plain text 4 baris. Agent baca per baris:
+line[0]=board/section, line[1]=title, line[2]=desc, line[3]=link
+
+
+## APP.PY v2 — STEP FLOW FINAL
+
+Step 1   — Input URL gambar + 🗑️ Clear Semua + preview thumbnail + canvas size
+Step 1B  — Link affiliate Shopee (opsional)
+Step 2   — Judul produk → Cek Judul (auto-detect tipe/section)
+Step 2B  — Muncul setelah Cek Judul:
+             · Konfirmasi tipe outfit (Section) — auto-detect, bisa override
+             · Hijab / Non-Hijab (user pilih — MASTER)
+               → Tunik: Hijab terkunci otomatis
+               → Selain Tunik: muncul pilihan Hijab/Non-Hijab
+             · Board & Section TIDAK ditampilkan sebagai dropdown
+             · Tampil hanya sebagai teks: "📌 Pin akan masuk: [Board] › [Section]"
+             · Generate judul & deskripsi Pinterest (via Gemini)
+             · Hasil generate (editable text area + code copy)
+Step 3   — Model reference (opsional, filtered by hijab)
+Step 4   — Subject: usia + ras (ras terkunci Indonesian kalau hijab)
+Step 5   — Pilih layout collage
+Step 6   — Generate prompt → simpan ke session_state (tidak disimpan ke disk)
+Step 7   — Upload bahan_prompt/ langsung ke Dropbox (tanpa ZIP)
+             · Fetch outfit dari Shopee CDN
+             · Upload: _model_ref, imageN, layout, prompt.txt
+             · Simpan folder_name + outfit_files ke session_state
+Step 8   — Drag-drop hasil GPT → preview slide order → Upload ready_pin/ ke Dropbox
+             · Slide 1: hasil GPT → disimpan sebagai slides/slide1.<ext>
+             · Slide 2+: outfit refs dari session_state (image1, image2, dst)
+             · Upload: slides/slide1, imageN, deskripsi.txt
+             · Hanya muncul setelah Step 7 selesai
+             · HARUS 1 sesi yang sama (outfit_files ada di session_state)
+
+CLEAR SEMUA:
+- Reset semua CLEAR_KEYS di session state
+- Reset per-layout keys (n_photo_slots_*, highlight_*)
+- Tidak menyentuh disk atau Dropbox
+
+
+## BOARD & SECTION PINTEREST
+
+Board 1: Fashion Outfit Hijab Motif Bunga
+  Sections: Dress, Blouse, Tunik, One Set, Outer
+
+Board 2: Fashion Outfit Modern Motif Bunga
+  Sections: Dress, Blouse, One Set, Outer
+
+Logika penentuan board (TIDAK boleh ganti nama board):
+- Tunik → selalu Board 1 (Hijab), terkunci
+- Hijab (user pilih) → Board 1
+- Non-Hijab → Board 2
+- Nationality: terkunci Indonesian kalau board Hijab
+
+Board & Section disimpan ke session_state["selected_board"] dan ["selected_section"]
+Tidak ada dropdown Board maupun dropdown Section kedua di UI.
+
+
+## MODEL REFERENCE — KONVENSI NAMA FILE
+
+Lokasi: assets/models/ (flat, tidak ada subfolder)
+Filter:
+- Nama file mengandung "hijab" → tampil saat board Hijab
+- Nama file tidak mengandung "hijab" → tampil saat board Modern
+
+Di Dropbox bahan_prompt/:
+- Nama file: _model_ref.jpg (prefix _ agar selalu urutan pertama alfabetis)
+- Peran di prompt: "1st uploaded image" ke GPT
+
+
+## LOGIKA AGENT PINTEREST (FASE 4 — BELUM DIBUAT)
+
+Slide order:
+- Slide 1: slides/slide1.<ext> (nama fix, hasil GPT dari app Step 8)
+- Slide 2+: image1.jpg, image2.jpg dst di root ready_pin/, sort numerik
+
+Field Pinterest yang diisi agent (urutan dari screenshot):
+1. Board → dari deskripsi.txt baris 1 (sebelum /)
+2. Section → dari deskripsi.txt baris 1 (setelah /)
+3. Title → baris 2
+4. Description → baris 3
+5. Destination link → baris 4
+6. Mark as AI-Modified → SELALU AKTIFKAN
+7. This Pin includes an AI-generated person → SELALU AKTIFKAN
+8. Publish → Publish immediately (wajib untuk carousel)
+
+Anti double-posting: setelah berhasil posting, agent rename
+ready_pin/ → ready_pin_DONE/. Agent skip semua folder _DONE.
+
+Tool yang akan dipakai: Browser Use
+Script: agent_pinterest.py (belum dibuat)
+
+
+## DROPBOX CLIENT — dropbox_client.py
+
+Fungsi tersedia:
+- _get_access_token(app_key, app_secret, refresh_token) → str
+- upload_file(local_path, dropbox_path, access_token, overwrite) → dict
+- upload_bytes(file_bytes, dropbox_path, access_token, overwrite) → dict
+- upload_folder(local_folder, dropbox_root, access_token, overwrite, progress_callback) → list
+- rename_folder(dropbox_path, new_dropbox_path, access_token) → dict
+- list_subfolders(dropbox_root, access_token) → list
+- upload_zip_folder_to_dropbox(...) → dict  ← high-level, tidak dipakai lagi di app
+
+App sekarang pakai upload_bytes() langsung (tanpa ZIP, tanpa temp folder).
+OAuth2: refresh token (long-lived) → tukar access token (~4 jam) setiap upload.
+
+
+## CATATAN TEKNIS PENTING
+
+- Dropbox token: OAuth2 refresh token + app key/secret
+  Access token short-lived (~4 jam), di-refresh otomatis setiap kali upload
+- output/ folder dan save_prompt_text() sudah DIHAPUS dari app.py
+- OUTPUT_DIR sudah DIHAPUS dari config.py
+- Canvas default: random saat pertama load
+- Highlight mode: "No Highlight" | "Full Shot" | "Medium Shot" — per layout
+- subject_hijab dikunci otomatis dari is_hijab state (bukan dropdown manual)
+- Tunik: section "Tunik" hanya ada di Board Hijab
+- deskripsi.txt baris 2 fallback ke judul_asli kalau title_pin kosong
+- AI model: gemini-3.1-flash-lite (text), gemini-3.1-flash-image (image/Nano Banana 2)
+  Kedua model ini valid dan terbaru per Juli 2026
+
+
+## ROADMAP FASE BERIKUTNYA
+
+Fase 3 — Streamlit Cloud deploy (NEXT):
+  - Ganti `from config import ...` → try/except dengan st.secrets fallback
+  - secrets.toml untuk lokal, Streamlit Cloud Secrets UI untuk cloud
+  - Tidak perlu perubahan lain karena output/ sudah dihapus
+
+Fase 4 — Agent Pinterest:
+  - Script: poll Dropbox /HASflo/*/ready_pin/ yang belum _DONE
+  - Tool: Browser Use
+  - Baca deskripsi.txt → isi form Pinterest → publish carousel
+  - Setelah posting: rename ready_pin/ → ready_pin_DONE/
