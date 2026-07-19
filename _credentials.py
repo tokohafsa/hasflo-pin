@@ -28,7 +28,7 @@ def _get(key: str, default=None):
     return default
 
 
-AI_ENABLED            = _get("AI_ENABLED", False)
+AI_ENABLED            = _get(True, False)
 AI_API_KEY            = _get("AI_API_KEY", "")
 DROPBOX_APP_KEY       = _get("DROPBOX_APP_KEY", "")
 DROPBOX_APP_SECRET    = _get("DROPBOX_APP_SECRET", "")
