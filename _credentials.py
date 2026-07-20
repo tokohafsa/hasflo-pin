@@ -9,8 +9,10 @@
 def _get(key: str, default=None):
     """
     Coba baca dari st.secrets dulu (Streamlit Cloud).
-    Fallback ke secrets.py kalau tidak ada / bukan konteks Streamlit.
+    Fallback ke secrets.py (lokal) via importlib untuk menghindari
+    konflik dengan Python built-in module 'secrets'.
     """
+    # 1. Coba st.secrets (Streamlit Cloud)
     try:
         import streamlit as st
         val = st.secrets.get(key)
@@ -19,19 +21,27 @@ def _get(key: str, default=None):
     except Exception:
         pass
 
+    # 2. Fallback ke secrets.py lokal via importlib
+    # (menghindari konflik dengan stdlib 'secrets' module)
     try:
-        import secrets as _s
-        return getattr(_s, key, default)
+        import importlib.util, os
+        _path = os.path.join(os.path.dirname(__file__), "secrets.py")
+        _spec = importlib.util.spec_from_file_location("_local_secrets", _path)
+        _mod  = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        val = getattr(_mod, key, None)
+        if val is not None:
+            return val
     except Exception:
         pass
 
     return default
 
 
-AI_ENABLED            = _get(True, False)
-AI_MODEL              = _get("AI_MODEL", "")
+AI_ENABLED            = _get("AI_ENABLED", True)
 AI_API_KEY            = _get("AI_API_KEY", "")
+AI_MODEL              = _get("AI_MODEL", "gemini-3.1-flash-lite")
 DROPBOX_APP_KEY       = _get("DROPBOX_APP_KEY", "")
 DROPBOX_APP_SECRET    = _get("DROPBOX_APP_SECRET", "")
 DROPBOX_REFRESH_TOKEN = _get("DROPBOX_REFRESH_TOKEN", "")
-DROPBOX_FOLDER        = _get("DROPBOX_FOLDER", "")
+DROPBOX_FOLDER        = _get("DROPBOX_FOLDER", "/HASflo")
