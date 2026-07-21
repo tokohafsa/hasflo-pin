@@ -173,6 +173,11 @@ st.divider()
 st.header("Step 1 — Input URL Gambar Produk")
 
 if st.button("🗑️ Clear Semua — Input Baru", key="btn_clear_all"):
+    # Hapus semua url_slot_N widget keys dulu sebelum clear url_slots
+    _n_slots = len(st.session_state.get("url_slots", [""]))
+    for _i in range(_n_slots):
+        if f"url_slot_{_i}" in st.session_state:
+            del st.session_state[f"url_slot_{_i}"]
     for k in CLEAR_KEYS:
         if k in st.session_state:
             del st.session_state[k]
@@ -181,6 +186,7 @@ if st.button("🗑️ Clear Semua — Input Baru", key="btn_clear_all"):
             key = f"{suffix}{layout['name']}"
             if key in st.session_state:
                 del st.session_state[key]
+    st.session_state["url_slots"] = [""]
     st.rerun()
 
 st.caption("Isi satu URL per field. Field baru muncul otomatis setelah field sebelumnya diisi.")
@@ -644,7 +650,8 @@ if st.session_state.get("last_prompt_json"):
         st.markdown("---")
 
     st.markdown("**🎨 Prompt Collage** (paste ke Midjourney / Gemini / ChatGPT):")
-    st.code(prompt_dict["prompt"], language=None, wrap_lines=True)
+    with st.expander("📄 Lihat & Copy Prompt", expanded=True):
+        st.code(prompt_dict["prompt"], language=None, wrap_lines=True)
 
     image_urls     = st.session_state.get("image_urls", [])
     layout_preview = selected_layout.get("preview_path", "")
