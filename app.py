@@ -476,12 +476,41 @@ if not st.session_state.get("_judul_checked"):
 else:
     _age_options = ["18 years old", "25 years old", "33 years old"]
 
-    # Nationality terkunci Indonesian kalau hijab
+    # ── Deteksi nationality dari nama model (jika toggle model ON) ──
+    _use_model_now  = st.session_state.get("use_model_ref", False)
+    _model_name_now = st.session_state.get("selected_model_name", "") or ""
+    _model_lower    = _model_name_now.lower()
     _is_hijab_subject = st.session_state.get("is_hijab", True)
-    if _is_hijab_subject:
-        _nationality_options = ["Indonesian"]
+
+    # Deteksi tipe model dari nama file
+    _model_is_indo  = _use_model_now and (
+        _model_lower.startswith("indo") or "indonesian" in _model_lower
+    )
+    _model_is_asian = _use_model_now and (
+        _model_lower.startswith("asian") or "asian" in _model_lower
+    )
+
+    # Tentukan nationality options & lock state
+    if _use_model_now and _model_is_indo:
+        # Model Indo/IndoHijab → terkunci Indonesian
+        _nationality_options  = ["Indonesian"]
+        _nationality_disabled = True
+        _nationality_help     = "Terkunci Indonesian sesuai model reference yang dipilih."
+    elif _use_model_now and _model_is_asian:
+        # Model Asian → Korean, Chinese, Japanese (tanpa Indonesian)
+        _nationality_options  = ["Korean", "Chinese", "Japanese"]
+        _nationality_disabled = False
+        _nationality_help     = "Nationality disesuaikan dengan model Asian yang dipilih."
+    elif _is_hijab_subject:
+        # Hijab tanpa model → terkunci Indonesian
+        _nationality_options  = ["Indonesian"]
+        _nationality_disabled = True
+        _nationality_help     = "Terkunci Indonesian karena konten Hijab."
     else:
-        _nationality_options = ["Indonesian", "Japanese", "Korean"]
+        # Default — bebas pilih
+        _nationality_options  = ["Indonesian", "Korean", "Chinese", "Japanese"]
+        _nationality_disabled = False
+        _nationality_help     = ""
 
     col_s1, col_s2 = st.columns(2)
 
@@ -493,8 +522,8 @@ else:
             "Nationality:",
             options=_nationality_options,
             key="subject_nationality",
-            disabled=_is_hijab_subject,
-            help="Terkunci Indonesian kalau konten Hijab." if _is_hijab_subject else "",
+            disabled=_nationality_disabled,
+            help=_nationality_help,
         )
 
     subject_custom = st.text_input(
@@ -509,12 +538,13 @@ else:
     else:
         nationality_map = {
             "Indonesian": "warm Indonesian face",
-            "Japanese":   "Japanese face",
             "Korean":     "Korean face",
+            "Chinese":    "Chinese face",
+            "Japanese":   "Japanese face",
         }
-        nat_str   = nationality_map.get(subject_nationality, "warm Indonesian face")
-        hijab_str = ", wearing hijab" if _is_hijab_subject else ", no hijab"
-        subject_desc = f"female, {nat_str}{hijab_str}, {subject_age}"
+        nat_str       = nationality_map.get(subject_nationality, "warm Indonesian face")
+        hijab_str     = ", wearing hijab" if _is_hijab_subject else ", no hijab"
+        subject_desc  = f"female, {nat_str}{hijab_str}, {subject_age}"
 
     st.caption(f"Subject: `{subject_desc}`")
 
