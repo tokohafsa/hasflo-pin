@@ -27,6 +27,7 @@ with st.sidebar:
     st.link_button("🌸 HAS_flo Pinterest", "https://id.pinterest.com/HAS_flo/", use_container_width=True)
     st.link_button("🤖 ChatGPT", "https://chatgpt.com/", use_container_width=True)
     st.link_button("🛒 Shopee Affiliate Custom Link", "https://affiliate.shopee.co.id/offer/custom_link", use_container_width=True)
+    st.link_button("💾 GitHub Repo", "https://github.com/tokohafsa/hasflo-pin", use_container_width=True)
     st.divider()
     st.caption("File output tersimpan di folder `output/`")
 
@@ -115,7 +116,7 @@ def scan_model_files(is_hijab: bool, models_dir: str = None) -> list:
         models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
     if not os.path.isdir(models_dir):
         return []
-    exts = {".png", ".jpg", ".jpeg", ".webp"}
+    exts = {".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG", ".JPEG", ".WEBP"}
     files = sorted([f for f in os.listdir(models_dir) if os.path.splitext(f)[1].lower() in exts])
     result = []
     for f in files:
@@ -465,7 +466,7 @@ else:
                 options=MODEL_LIST,
                 key="selected_model_name",
             )
-            model_exts = [".png", ".jpg", ".jpeg", ".webp"]
+            model_exts = [".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG", ".webp", ".WEBP"]
             model_preview_path = None
             if selected_model_name:
                 _models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
@@ -809,7 +810,7 @@ if st.session_state.get("last_prompt_json"):
         step += 1
         if _use_model and _model_name:
             _prog.progress(int(step / total_steps * 100), text="Upload model reference...")
-            _model_exts = [".png", ".jpg", ".jpeg", ".webp"]
+            _model_exts = [".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG", ".webp", ".WEBP"]
             _model_path = None
             _models_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assets", "models")
             for _ext in _model_exts:
