@@ -6,9 +6,11 @@
 import os
 import re
 import json
+import io
 import streamlit as st
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from PIL import Image
 
 from image_generator import (
     build_prompt_json,
@@ -17,6 +19,34 @@ from image_generator import (
 )
 
 WIB = ZoneInfo("Asia/Jakarta")
+
+
+# ============================================================
+# HELPER — FIT IMAGE KE CANVAS DENGAN DOMINANT COLOR FILL
+# ============================================================
+
+def fit_to_canvas_dominant(img_bytes: bytes, canvas_w: int, canvas_h: int) -> bytes:
+    """
+    Resize gambar proporsional ke canvas_w x canvas_h.
+    Sisa area diisi warna dominan gambar (via Pillow quantize).
+    Return: bytes JPEG
+    """
+    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+    try:
+        quantized = img.quantize(colors=5, method=Image.Quantize.MEDIANCUT)
+        palette   = quantized.getpalette()
+        dominant  = tuple(palette[:3])
+    except Exception:
+        dominant  = (255, 255, 255)
+    img.thumbnail((canvas_w, canvas_h), Image.LANCZOS)
+    canvas   = Image.new("RGB", (canvas_w, canvas_h), dominant)
+    offset_x = (canvas_w - img.width) // 2
+    offset_y = (canvas_h - img.height) // 2
+    canvas.paste(img, (offset_x, offset_y))
+    buf = io.BytesIO()
+    canvas.save(buf, format="JPEG", quality=95)
+    return buf.getvalue()
+
 
 st.set_page_config(page_title="HASflo Prompt Generator", page_icon="🌸", layout="wide")
 
@@ -960,10 +990,13 @@ else:
 
             for idx, (ext, data) in sorted(_outfit_files.items()):
                 step_rp += 1
-                _prog2.progress(int(step_rp / total_rp * 100), text=f"Upload image{idx}.{ext}...")
+                _prog2.progress(int(step_rp / total_rp * 100), text=f"Processing image{idx}...")
                 try:
-                    _dbx_upload_bytes(data, f"{dbx_rp}/image{idx}.{ext}", _token)
-                    uploads_rp.append(f"image{idx}.{ext}")
+                    # Fit ke canvas ratio pilihan user dengan dominant color fill
+                    _canvas = CANVAS_OPTIONS.get(selected_canvas_key, CANVAS_OPTIONS["1000x1500"])
+                    _fitted = fit_to_canvas_dominant(data, _canvas["w"], _canvas["h"])
+                    _dbx_upload_bytes(_fitted, f"{dbx_rp}/image{idx}.jpg", _token)
+                    uploads_rp.append(f"image{idx}.jpg")
                 except Exception as e:
                     errors_rp.append(f"image{idx}: {e}")
 
