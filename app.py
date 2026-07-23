@@ -450,10 +450,15 @@ else:
     if use_model_ref:
         if not MODEL_LIST:
             _tag = "hijab" if _is_hijab_now else "non-hijab"
+            _models_dir_dbg = os.path.join(os.path.dirname(__file__), "assets", "models")
             st.warning(
                 f"⚠️ Tidak ada file model {_tag} ditemukan di `assets/models/`. "
                 f"{'Tambahkan file dengan kata \"hijab\" di nama file.' if _is_hijab_now else 'Tambahkan file tanpa kata \"hijab\" di nama file.'}"
             )
+            st.caption(f"🔍 Debug path: `{_models_dir_dbg}` — exists: `{os.path.isdir(_models_dir_dbg)}`")
+            if os.path.isdir(_models_dir_dbg):
+                _all_files = os.listdir(_models_dir_dbg)
+                st.caption(f"Files ditemukan: `{_all_files}`")
         else:
             selected_model_name = st.selectbox(
                 "Pilih model:",
