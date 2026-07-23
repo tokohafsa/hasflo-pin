@@ -112,7 +112,7 @@ def get_board_from_hijab(is_hijab: bool, product_type: str) -> str:
 
 def scan_model_files(is_hijab: bool, models_dir: str = None) -> list:
     if models_dir is None:
-        models_dir = os.path.join(os.path.dirname(__file__), "assets", "models")
+        models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
     if not os.path.isdir(models_dir):
         return []
     exts = {".png", ".jpg", ".jpeg", ".webp"}
@@ -450,7 +450,7 @@ else:
     if use_model_ref:
         if not MODEL_LIST:
             _tag = "hijab" if _is_hijab_now else "non-hijab"
-            _models_dir_dbg = os.path.join(os.path.dirname(__file__), "assets", "models")
+            _models_dir_dbg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
             st.warning(
                 f"⚠️ Tidak ada file model {_tag} ditemukan di `assets/models/`. "
                 f"{'Tambahkan file dengan kata \"hijab\" di nama file.' if _is_hijab_now else 'Tambahkan file tanpa kata \"hijab\" di nama file.'}"
@@ -468,7 +468,7 @@ else:
             model_exts = [".png", ".jpg", ".jpeg", ".webp"]
             model_preview_path = None
             if selected_model_name:
-                _models_dir = os.path.join(os.path.dirname(__file__), "assets", "models")
+                _models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
                 for ext in model_exts:
                     candidate = os.path.join(_models_dir, selected_model_name + ext)
                     if os.path.isfile(candidate):
@@ -811,7 +811,7 @@ if st.session_state.get("last_prompt_json"):
             _prog.progress(int(step / total_steps * 100), text="Upload model reference...")
             _model_exts = [".png", ".jpg", ".jpeg", ".webp"]
             _model_path = None
-            _models_dir = _os.path.join(_os.path.dirname(__file__), "assets", "models")
+            _models_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assets", "models")
             for _ext in _model_exts:
                 _c = _os.path.join(_models_dir, _model_name + _ext)
                 if _os.path.isfile(_c):
