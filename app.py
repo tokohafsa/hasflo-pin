@@ -195,12 +195,24 @@ if "url_slots" not in st.session_state or not st.session_state["url_slots"]:
     st.session_state["url_slots"] = [""]
 
 for i in range(len(st.session_state["url_slots"])):
-    st.session_state["url_slots"][i] = st.text_input(
-        f"URL gambar {i + 1}:",
-        value=st.session_state["url_slots"][i],
-        key=f"url_slot_{i}",
-        placeholder="https://down-id.img.susercontent.com/file/xxx.webp",
-    )
+    _col_url, _col_clr = st.columns([10, 1])
+    with _col_url:
+        st.session_state["url_slots"][i] = st.text_input(
+            f"URL gambar {i + 1}:",
+            value=st.session_state["url_slots"][i],
+            key=f"url_slot_{i}",
+            placeholder="https://down-id.img.susercontent.com/file/xxx.webp",
+        )
+    with _col_clr:
+        st.markdown("<div style='margin-top:28px'>", unsafe_allow_html=True)
+        if st.button("✕", key=f"clr_slot_{i}", help="Hapus URL ini"):
+            st.session_state["url_slots"].pop(i)
+            if f"url_slot_{i}" in st.session_state:
+                del st.session_state[f"url_slot_{i}"]
+            if not st.session_state["url_slots"]:
+                st.session_state["url_slots"] = [""]
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 if st.session_state["url_slots"][-1].strip():
     st.session_state["url_slots"].append("")
@@ -245,7 +257,9 @@ shopee_affiliate_link = st.text_input(
     key="shopee_affiliate_link",
 )
 if shopee_affiliate_link.strip():
-    st.success("✅ Link affiliate disimpan.")
+    shopee_affiliate_link = shopee_affiliate_link.strip().rstrip(".")
+    st.session_state["shopee_affiliate_link"] = shopee_affiliate_link
+    st.success(f"✅ Link affiliate disimpan: `{shopee_affiliate_link}`")
 
 st.divider()
 
@@ -745,9 +759,9 @@ if st.session_state.get("last_prompt_json"):
         _canvas_ratio = CANVAS_OPTIONS.get(selected_canvas_key, {}).get("ratio", "")
         _ratio_prefix = f"[{_canvas_ratio.replace(':', 'x')}]" if _canvas_ratio else ""
         judul_asli    = st.session_state.get("judul_input_field", "").strip()
-        _safe         = re.sub(r'[\\/*?:"<>|]', "", judul_asli).strip().replace(" ", "_")[:50] if judul_asli else "hasflo_pin"
+        _safe         = re.sub(r'[\\/*?:"<>|]', "", judul_asli).strip().replace(" ", "_")[:20] if judul_asli else "hasflo_pin"
         _datestamp    = datetime.now().strftime("%Y%m%d")
-        folder_name   = f"{_ratio_prefix}{_safe}_{_datestamp}"
+        folder_name   = f"{_safe}_{_ratio_prefix}_{_datestamp}"
 
         _use_model    = st.session_state.get("use_model_ref", False)
         _model_name   = st.session_state.get("selected_model_name") if _use_model else None
