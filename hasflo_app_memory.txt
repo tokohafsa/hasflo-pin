@@ -1,0 +1,279 @@
+============================================================
+HASFLO PINTEREST PROMPT GENERATOR — APP MEMORY / SUMMARY
+============================================================
+Update terakhir: Juli 2026
+- Optimasi SEO deskripsi Pinterest
+- Fix path model reference (abspath, case-insensitive extension)
+- Fix alur affiliate link (Step 1A, trailing dot strip, clickable link)
+- Tombol Input Baru di akhir Step 8
+- Auto-rename folder parent → prefix READY_ setelah upload ready_pin
+- Fix nationality selector berdasarkan nama model reference
+- Tombol clear per URL slot
+- Format folder name: 20 char judul raw + ratio
+- Tombol GitHub repo di sidebar
+- Expander prompt collapsed by default
+
+------------------------------------------------------------
+FUNGSI APLIKASI
+------------------------------------------------------------
+Aplikasi Streamlit internal untuk akun Pinterest fashion "HAS_flo".
+Tujuan: generate prompt teks siap pakai (untuk ChatGPT/Midjourney/Gemini)
+yang menghasilkan collage foto fashion gaya Pinterest/scrapbook dari
+foto produk Shopee, plus generate judul & deskripsi Pinterest via Gemini AI.
+
+Deploy: Streamlit Cloud (https://hasflo-pin.streamlit.app)
+Repo  : https://github.com/tokohafsa/hasflo-pin (public)
+
+File utama:
+- app.py              -> UI Streamlit, semua step & session state
+- image_generator.py  -> logic build prompt teks + load layout JSON
+- dropbox_client.py   -> upload/rename/list Dropbox via OAuth2
+- _credentials.py     -> baca secrets dari st.secrets
+
+------------------------------------------------------------
+ALUR PIPELINE (STEP DI APP.PY)
+------------------------------------------------------------
+Step 1A  — Link affiliate Shopee (opsional)
+           - Auto-strip trailing dot (contoh: "https://s.shopee.co.id/xxx." → tanpa titik)
+           - Tampil sebagai clickable link target="_blank" setelah diisi
+           - Masuk ke deskripsi.txt di ready_pin/ Dropbox untuk agent
+Step 1   — Input URL gambar produk Shopee
+           - Auto-tambah slot baru setelah field terisi
+           - Tombol ✕ clear per slot di samping kanan field
+           - Strip suffix @resize_ otomatis
+Step 2   — Judul produk Shopee → flow 3 tahap:
+             1. Input judul
+             2. Klik "🔍 Cek Judul" → auto-detect tipe outfit
+             3. Konfirmasi/koreksi tipe + pilih hijab/non-hijab → klik "✨ Generate"
+             → output: Judul & Deskripsi Pinterest via Gemini AI
+Step 3   — Canvas (aspect ratio, default random saat pertama load)
+Step 3.5 — MODEL REFERENCE (opsional, toggle default OFF)
+           - Scan otomatis assets/models/ (case-insensitive: .png/.PNG/.jpg/.JPG dll)
+           - Nama file (tanpa ekstensi) = nama yg tampil di dropdown
+           - Filter hijab/non-hijab: file dengan kata "hijab" → board hijab
+           - Path: os.path.dirname(os.path.abspath(__file__)) + assets/models/
+Step 4   — Deskripsi subject (usia, nationality, hijab/non-hijab, atau custom text)
+           Nationality logic (lihat detail di bawah)
+Step 5   — Pilih layout collage (load otomatis dari assets/*.json + *.jpg)
+           - Per-layout: jumlah photo slot (3-7) & highlight mode
+Step 6   — Generate Prompt (panggil build_prompt_json)
+Step 7   — Tampilkan prompt + upload bahan_prompt/ ke Dropbox
+           - Setelah upload sukses: tombol primary "🤖 Buka ChatGPT" muncul
+Step 8   — Upload hasil GPT + kirim ready_pin/ ke Dropbox
+           - Setelah sukses: folder parent di-rename → prefix READY_
+           - Tombol "🌸 Input Baru — Produk Berikutnya" di paling bawah
+
+------------------------------------------------------------
+NATIONALITY LOGIC (Step 4) — BERGANTUNG MODEL REFERENCE
+------------------------------------------------------------
+Toggle model OFF:
+  - Hijab     → terkunci Indonesian
+  - Non-hijab → bebas: Indonesian, Korean, Chinese, Japanese
+
+Toggle model ON:
+  - Model nama starts with "indo" / contains "indonesian"
+    → terkunci Indonesian
+  - Model nama starts with "asian" / contains "asian"
+    → hanya: Korean, Chinese, Japanese (Indonesian tidak tersedia)
+  - Deteksi via _model_lower = selected_model_name.lower()
+
+nationality_map:
+  "Indonesian" → "warm Indonesian face"
+  "Korean"     → "Korean face"
+  "Chinese"    → "Chinese face"
+  "Japanese"   → "Japanese face"
+
+------------------------------------------------------------
+KONVENSI PENAMAAN FILE MODEL (assets/models/)
+------------------------------------------------------------
+indohijab*.png/PNG  → Indonesian + hijab (muncul di board hijab)
+indo*.png/PNG       → Indonesian non-hijab (muncul di board modern)
+asian*.png/PNG      → Asian non-hijab (Korean/Chinese/Japanese)
+asianhijab*.png/PNG → Asian + hijab (jika butuh)
+
+Tambah model baru = upload file ke assets/models/, auto-terdeteksi.
+Ekstensi case-insensitive (.png/.PNG/.jpg/.JPG/.jpeg/.JPEG/.webp/.WEBP)
+PENTING: Rename file ke lowercase untuk menghindari bug di Linux/Streamlit Cloud.
+
+------------------------------------------------------------
+STRUKTUR FOLDER DROPBOX (/HASflo/)
+------------------------------------------------------------
+Format nama folder:
+  {20_char_judul_raw}_{[RATIOxRATIO]}_{YYYYMMDD}
+  Contoh: Dress_Wanita_Motif_[2x3]_20260723
+
+Setelah ready_pin/ terupload → folder direname otomatis:
+  READY_Dress_Wanita_Motif_[2x3]_20260723
+
+Di dalam folder:
+  bahan_prompt/         → untuk GPT
+    image1.xxx          → model reference (jika toggle aktif)
+    image2.xxx, dst     → outfit reference
+    layout.xxx          → layout reference (SELALU paling akhir)
+    prompt.txt          → prompt collage, paste ke ChatGPT
+
+  ready_pin/            → untuk agent automation
+    slides/slide1.xxx   → hasil gambar GPT
+    image1.xxx, dst     → outfit reference (carousel)
+    deskripsi.txt       → 4 baris flat (lihat FORMAT DESKRIPSI.TXT)
+
+------------------------------------------------------------
+FORMAT DESKRIPSI.TXT (ready_pin/ — agent-friendly, 4 baris flat)
+------------------------------------------------------------
+Line 1: board/section       → "Fashion Outfit Hijab Motif Bunga/Dress"
+Line 2: judul Pinterest     → hasil generated Gemini
+Line 3: deskripsi Pinterest → hasil generated Gemini
+Line 4: link affiliate      → link Shopee (kosong jika tidak diisi)
+
+PENTING: Format 4 baris flat TIDAK BOLEH diubah — agent membaca per baris.
+
+------------------------------------------------------------
+FLOW STEP 2 — DETAIL
+------------------------------------------------------------
+1. User input judul produk Shopee
+2. Klik "🔍 Cek Judul" → detect_product_type() → _judul_checked = True
+3. Muncul: info tipe terdeteksi + dropdown konfirmasi + pilih hijab/non-hijab
+4. Klik "✨ Generate" → Gemini API → simpan ke session_state
+
+Guard: tombol Generate tidak muncul sebelum Cek Judul diklik.
+product_type yang masuk Gemini = hasil konfirmasi user, bukan auto-detect saja.
+
+Auto-detect keyword mapping:
+- dress   : ["dress", "gamis", "terusan"]
+- blouse  : ["blouse", "atasan", "kemeja"]
+- tunik   : ["tunik"]
+- outer   : ["outer", "jaket", "cardigan", "sweater"]
+- setelan : ["setelan", "one set", "co-ord"]
+- fallback: "dress"
+
+------------------------------------------------------------
+STRUKTUR DESKRIPSI PINTEREST (output Gemini)
+------------------------------------------------------------
+Kalimat 1 (WAJIB): judul raw Shopee verbatim — disalin apa adanya
+Kalimat 2 (WAJIB): mengandung "OOTD" DAN "motif bunga"
+Kalimat 3-4      : min 3 keyword dari SEO_KEYWORDS secara natural
+Limit            : max 500 karakter
+Bahasa           : Indonesia, faktual, deskriptif, TIDAK persuasif
+DILARANG         : "dapatkan sekarang", "segera beli", "promo", dll
+
+Judul Pinterest:
+Format : [Tipe Outfit] + "Motif Bunga" + ciri khas produk
+Contoh : "Dress Motif Bunga Midi Rayon Lengan Panjang"
+Limit  : max 100 karakter, "OOTD" tidak masuk judul
+
+------------------------------------------------------------
+SEO_KEYWORDS PER TIPE (app.py) — TARGET INDONESIA
+------------------------------------------------------------
+Keyword wajib di semua tipe: "OOTD" dan "motif bunga"
+Posisi 1: "OOTD [tipe] motif bunga"   ← bobot tertinggi
+Posisi 2: "[tipe] motif bunga"
+Posisi 3: "inspirasi outfit [tipe] floral"
+Posisi 4-8: varian spesifik (kondangan, kerja, hijab, dll)
+Posisi 9-10: "inspirasi OOTD [tipe] bunga", "fashion [tipe] motif bunga"
+
+------------------------------------------------------------
+BOARD & SECTION ROUTING
+------------------------------------------------------------
+Board HIJAB  : "Fashion Outfit Hijab Motif Bunga"
+  Sections   : Dress | Blouse | Tunik | One Set | Outer
+Board MODERN : "Fashion Outfit Modern Motif Bunga"
+  Sections   : Dress | Blouse | One Set | Outer
+Tunik → selalu Board Hijab, tidak bisa override
+
+------------------------------------------------------------
+CANVAS OPTIONS
+------------------------------------------------------------
+"1000x1500" → ratio "2:3"  → prefix "[2x3]"
+"1080x1440" → ratio "3:4"  → prefix "[3x4]"
+"1500x1500" → ratio "1:1"  → prefix "[1x1]"
+"1080x1920" → ratio "9:16" → prefix "[9x16]"
+
+------------------------------------------------------------
+LAYOUT SYSTEM (assets/)
+------------------------------------------------------------
+- Load otomatis via load_layouts() — scan assets/*.json
+- JSON + JPG harus nama file sama (stem sama): layout4.json + layout4.jpg
+- Field JSON: name, description, tags, order, n_photo_slots, swipe_cta
+- Tambah layout baru = taruh JSON + JPG di assets/, tidak perlu ubah kode
+- Urutan UI ditentukan field "order" di JSON
+
+------------------------------------------------------------
+HIGHLIGHT / HERO SHOT
+------------------------------------------------------------
+Full Shot   → full body head-to-toe, organic irregular border
+Medium Shot → upper body waist-up, organic irregular border
+No Highlight → tidak ada hero shot terpisah
+
+------------------------------------------------------------
+SESSION STATE — KEYS PENTING
+------------------------------------------------------------
+image_urls            : list[str]  — URL gambar produk sudah di-clean
+url_slots             : list[str]  — raw slot URL
+shopee_affiliate_link : str        — link affiliate (key widget)
+generated_title       : str        — hasil Gemini judul Pinterest
+generated_desc        : str        — hasil Gemini deskripsi Pinterest
+title_desc_done       : bool       — True jika generate Gemini berhasil
+_product_type_val     : str        — tipe outfit aktif
+_judul_checked        : bool       — True setelah Cek Judul diklik
+selected_layout_name  : str        — nama layout aktif
+last_prompt_json      : dict|None  — hasil build_prompt_json()
+use_model_ref         : bool       — toggle model reference
+selected_model_name   : str|None   — nama model dipilih
+canvas_size_label     : str        — label canvas (key widget)
+is_hijab              : bool       — True jika konten hijab
+selected_board        : str        — board Pinterest aktif
+selected_section      : str        — section board aktif
+_folder_name          : str        — nama folder Dropbox aktif
+_outfit_files         : dict       — {idx: (ext, bytes)} outfit refs
+_bahan_uploaded       : bool       — gate Step 8
+title_edit            : str        — key widget text_area judul
+desc_edit             : str        — key widget text_area deskripsi
+n_photo_slots_{name}  : int        — slot per layout
+highlight_{name}      : str        — hero shot mode per layout
+
+------------------------------------------------------------
+CATATAN TEKNIS PENTING
+------------------------------------------------------------
+- Path model: os.path.dirname(os.path.abspath(__file__)) — WAJIB pakai abspath
+  (Streamlit Cloud: __file__ tanpa abspath return relative path yang gagal resolve)
+- Ekstensi file model: case-insensitive — include .PNG/.JPG/.JPEG/.WEBP
+- deskripsi.txt HANYA ada di ready_pin/ — TIDAK di bahan_prompt/
+- Format deskripsi.txt 4 baris flat TIDAK BOLEH diubah tanpa update agent
+- Set session_state untuk key widget → StreamlitAPIException
+  (solusi: strip/transform nilai saat diambil downstream, bukan saat input)
+- _credentials.py di-import di 3 tempat:
+    Step 2  : AI_API_KEY, AI_MODEL (Gemini generate)
+    Step 7  : DROPBOX_* (upload bahan_prompt)
+    Step 8  : DROPBOX_* (upload ready_pin)
+- Expander prompt: expanded=False (collapsed by default)
+- Folder rename: rename_folder() dari dropbox_client.py
+  old: /HASflo/{folder_name}
+  new: /HASflo/READY_{folder_name}
+
+------------------------------------------------------------
+SIDEBAR LINKS
+------------------------------------------------------------
+- 📌 Pinterest Pin Builder
+- 🌸 HAS_flo Pinterest
+- 🤖 ChatGPT
+- 🛒 Shopee Affiliate Custom Link
+- 💾 GitHub Repo (https://github.com/tokohafsa/hasflo-pin)
+
+------------------------------------------------------------
+FASE BERIKUTNYA — AGENT AUTOMATION
+------------------------------------------------------------
+Status: menunggu Pinterest API approved (sudah dipropose, trial tier)
+Lokasi agent: lokal (PC), cron job terjadwal
+Jadwal posting WIB: 20:00 (utama), 07:30 (tambahan jika 2 pin/hari)
+Platform: Pinterest API v5 resmi (bukan browser automation)
+
+Alur agent (pinterest_agent.py — belum dibuat):
+1. Poll Dropbox /HASflo/ → filter folder prefix READY_
+2. Baca deskripsi.txt (4 baris flat)
+3. Resolve Board ID via GET /v5/boards
+4. Deteksi tipe: ada slides/ → carousel, tidak ada → single image
+5. Download media dari Dropbox
+6. POST /v5/pins
+7. Rename READY_{folder} → DONE_{folder} setelah sukses
+
+Pinterest API trial: 1000 req/day — cukup untuk skala HASflo saat ini.
