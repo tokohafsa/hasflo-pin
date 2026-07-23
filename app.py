@@ -823,7 +823,12 @@ if st.session_state.get("last_prompt_json"):
                     _dbx_upload_bytes(_mf.read(), f"{dbx_bp}/_model_ref.{_mext}", _token)
                 uploads.append(f"_model_ref.{_mext}")
             else:
-                errors.append(f"File model '{_model_name}' tidak ditemukan.")
+                _all_files = _os.listdir(_models_dir) if _os.path.isdir(_models_dir) else []
+                errors.append(
+                    f"File model '{_model_name}' tidak ditemukan. "
+                    f"Path: {_models_dir} | "
+                    f"Files: {_all_files}"
+                )
 
         step += 1
         _prog.progress(int(step / total_steps * 100), text="Upload layout...")
