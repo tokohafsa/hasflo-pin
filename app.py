@@ -110,7 +110,9 @@ def get_board_from_hijab(is_hijab: bool, product_type: str) -> str:
     return BOARD_HIJAB if is_hijab else BOARD_MODERN
 
 
-def scan_model_files(is_hijab: bool, models_dir: str = "assets/models") -> list:
+def scan_model_files(is_hijab: bool, models_dir: str = None) -> list:
+    if models_dir is None:
+        models_dir = os.path.join(os.path.dirname(__file__), "assets", "models")
     if not os.path.isdir(models_dir):
         return []
     exts = {".png", ".jpg", ".jpeg", ".webp"}
@@ -461,8 +463,9 @@ else:
             model_exts = [".png", ".jpg", ".jpeg", ".webp"]
             model_preview_path = None
             if selected_model_name:
+                _models_dir = os.path.join(os.path.dirname(__file__), "assets", "models")
                 for ext in model_exts:
-                    candidate = os.path.join("assets/models", selected_model_name + ext)
+                    candidate = os.path.join(_models_dir, selected_model_name + ext)
                     if os.path.isfile(candidate):
                         model_preview_path = candidate
                         break
@@ -803,8 +806,9 @@ if st.session_state.get("last_prompt_json"):
             _prog.progress(int(step / total_steps * 100), text="Upload model reference...")
             _model_exts = [".png", ".jpg", ".jpeg", ".webp"]
             _model_path = None
+            _models_dir = _os.path.join(_os.path.dirname(__file__), "assets", "models")
             for _ext in _model_exts:
-                _c = _os.path.join("assets/models", _model_name + _ext)
+                _c = _os.path.join(_models_dir, _model_name + _ext)
                 if _os.path.isfile(_c):
                     _model_path = _c
                     break
@@ -976,8 +980,40 @@ else:
                 st.warning(f"⚠️ {err}")
 
             if uploads_rp:
-                st.success(
-                    f"✅ `ready_pin/` terupload! ({len(uploads_rp)} file) → "
-                    f"`{dbx_rp}`"
-                )
+                # ── Rename folder parent: tambah prefix READY_ ──
+                _old_parent = f"{DROPBOX_FOLDER.rstrip('/')}/{_folder_name}"
+                _new_folder_name = f"READY_{_folder_name}"
+                _new_parent = f"{DROPBOX_FOLDER.rstrip('/')}/{_new_folder_name}"
+                try:
+                    from dropbox_client import rename_folder as _dbx_rename
+                    _dbx_rename(_old_parent, _new_parent, _token)
+                    st.session_state["_folder_name"] = _new_folder_name
+                    st.success(
+                        f"✅ `ready_pin/` terupload! ({len(uploads_rp)} file) → "
+                        f"`{_new_parent}/ready_pin`"
+                    )
+                    st.info(f"📁 Folder direname → `{_new_folder_name}`")
+                except Exception as _e:
+                    st.success(
+                        f"✅ `ready_pin/` terupload! ({len(uploads_rp)} file) → "
+                        f"`{dbx_rp}`"
+                    )
+                    st.warning(f"⚠️ Rename folder gagal: {_e}")
                 st.caption("Agent Pinterest siap memproses folder ini.")
+
+st.divider()
+if st.button("🌸 Input Baru — Produk Berikutnya", type="primary", use_container_width=True, key="btn_input_baru"):
+    _n_slots = len(st.session_state.get("url_slots", [""]))
+    for _i in range(_n_slots):
+        if f"url_slot_{_i}" in st.session_state:
+            del st.session_state[f"url_slot_{_i}"]
+    for k in CLEAR_KEYS:
+        if k in st.session_state:
+            del st.session_state[k]
+    for layout in LAYOUT_OPTIONS:
+        for suffix in ["n_photo_slots_", "highlight_"]:
+            key = f"{suffix}{layout['name']}"
+            if key in st.session_state:
+                del st.session_state[key]
+    st.session_state["url_slots"] = [""]
+    st.rerun()
