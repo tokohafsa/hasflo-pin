@@ -167,6 +167,24 @@ st.caption("Generate prompt collage siap pakai untuk Midjourney, Gemini, atau Ch
 st.divider()
 
 # ============================================================
+# STEP 1A — LINK AFFILIATE SHOPEE
+# ============================================================
+
+st.subheader("Step 1A — 🔗 Link Affiliate Shopee *(opsional)*")
+st.caption("Akan disertakan di deskripsi.txt dalam folder `ready_pin/` di Dropbox untuk agent Pinterest.")
+
+shopee_affiliate_link = st.text_input(
+    "Link affiliate Shopee:",
+    placeholder="https://s.shopee.co.id/AAFmsXfSnq.",
+    key="shopee_affiliate_link",
+)
+if shopee_affiliate_link.strip():
+    shopee_affiliate_link = shopee_affiliate_link.strip().rstrip(".")
+    st.markdown(f'✅ Link affiliate: <a href="{shopee_affiliate_link}" target="_blank">{shopee_affiliate_link}</a>', unsafe_allow_html=True)
+
+st.divider()
+
+# ============================================================
 # STEP 1 — INPUT URL GAMBAR
 # ============================================================
 
@@ -241,25 +259,6 @@ if "canvas_size_label" not in st.session_state:
 
 selected_canvas_label = st.selectbox("Ukuran canvas:", options=canvas_labels, key="canvas_size_label")
 selected_canvas_key = canvas_key_options[canvas_labels.index(selected_canvas_label)]
-
-st.divider()
-
-# ============================================================
-# STEP 1B — LINK AFFILIATE SHOPEE
-# ============================================================
-
-st.subheader("Step 1B — 🔗 Link Affiliate Shopee *(opsional)*")
-st.caption("Akan disertakan di deskripsi.txt dalam folder `ready_pin/` di Dropbox untuk agent Pinterest.")
-
-shopee_affiliate_link = st.text_input(
-    "Link affiliate Shopee:",
-    placeholder="https://shope.ee/xxxx atau link custom affiliate",
-    key="shopee_affiliate_link",
-)
-if shopee_affiliate_link.strip():
-    shopee_affiliate_link = shopee_affiliate_link.strip().rstrip(".")
-    st.session_state["shopee_affiliate_link"] = shopee_affiliate_link
-    st.success(f"✅ Link affiliate disimpan: `{shopee_affiliate_link}`")
 
 st.divider()
 
@@ -916,7 +915,7 @@ else:
 
             title_pin      = st.session_state.get("title_edit", "").strip()
             desc_pin       = st.session_state.get("desc_edit", "").strip()
-            link_affiliate = st.session_state.get("shopee_affiliate_link", "").strip()
+            link_affiliate = st.session_state.get("shopee_affiliate_link", "").strip().rstrip(".")
             _board         = st.session_state.get("selected_board", BOARD_HIJAB)
             _section       = st.session_state.get("selected_section", "Dress")
             judul_asli     = st.session_state.get("judul_input_field", "").strip()
