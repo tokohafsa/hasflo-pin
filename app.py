@@ -694,7 +694,7 @@ if st.session_state.get("last_prompt_json"):
         st.markdown("---")
 
     st.markdown("**🎨 Prompt Collage** (paste ke Midjourney / Gemini / ChatGPT):")
-    with st.expander("📄 Lihat & Copy Prompt", expanded=True):
+    with st.expander("📄 Lihat & Copy Prompt", expanded=False):
         st.code(prompt_dict["prompt"], language=None, wrap_lines=True)
 
     image_urls     = st.session_state.get("image_urls", [])
