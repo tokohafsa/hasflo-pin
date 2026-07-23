@@ -1,4 +1,6 @@
 # Hasflo Pinterest Prompt App
+https://hasflo-pin.streamlit.app
+
 
 A web application for generating and managing Pinterest prompts.
 
