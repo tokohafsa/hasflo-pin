@@ -1,0 +1,153 @@
+{
+  "updated_at": "2026-07-25",
+  "week": 30,
+  "source": ["manual_seed"],
+  "keywords": {
+    "dress": {
+      "title": [
+        "dress motif bunga",
+        "floral dress wanita",
+        "dress bunga cantik",
+        "midi dress floral",
+        "outfit kondangan motif bunga",
+        "dress floral elegan",
+        "dress bunga wanita Indonesia",
+        "long dress motif bunga",
+        "dress pesta floral",
+        "korean floral dress"
+      ],
+      "description": [
+        "OOTD dress motif bunga",
+        "inspirasi outfit dress floral",
+        "dress midi floral",
+        "baju pesta motif bunga",
+        "inspirasi OOTD wanita Indonesia",
+        "fashion wanita motif bunga",
+        "dress bunga casual",
+        "outfit kondangan floral",
+        "Pinterest fashion wanita",
+        "dress lengan panjang motif bunga"
+      ]
+    },
+    "blouse": {
+      "title": [
+        "blouse motif bunga",
+        "floral blouse wanita",
+        "atasan bunga wanita",
+        "blouse floral casual",
+        "kemeja motif bunga wanita",
+        "blouse bunga lengan panjang",
+        "atasan floral korean style",
+        "blouse rayon motif bunga",
+        "floral atasan wanita Indonesia",
+        "blouse bunga outfit kerja"
+      ],
+      "description": [
+        "OOTD blouse motif bunga",
+        "inspirasi outfit blouse floral",
+        "outfit kerja motif bunga",
+        "kemeja motif bunga wanita",
+        "inspirasi OOTD atasan bunga",
+        "fashion atasan motif bunga",
+        "blouse wanita Indonesia",
+        "atasan bunga casual",
+        "blouse lengan panjang floral",
+        "Pinterest fashion atasan"
+      ]
+    },
+    "tunik": {
+      "title": [
+        "tunik motif bunga",
+        "floral tunik wanita",
+        "tunik bunga muslimah",
+        "tunik floral lengan panjang",
+        "baju tunik motif bunga",
+        "tunik rayon floral",
+        "tunik muslim motif bunga",
+        "floral tunik hijab",
+        "tunik bunga casual",
+        "tunik wanita Indonesia floral"
+      ],
+      "description": [
+        "OOTD tunik motif bunga",
+        "inspirasi outfit tunik floral",
+        "tunik bunga muslimah",
+        "baju tunik motif bunga",
+        "tunik floral hijab",
+        "outfit tunik wanita Indonesia",
+        "inspirasi OOTD tunik bunga",
+        "fashion muslimah motif bunga",
+        "tunik casual motif bunga",
+        "Pinterest fashion hijab"
+      ]
+    },
+    "outer": {
+      "title": [
+        "outer motif bunga",
+        "floral outer wanita",
+        "cardigan bunga wanita",
+        "jaket motif bunga wanita",
+        "outer floral casual",
+        "cardigan floral korean style",
+        "sweater motif bunga",
+        "outer bunga lengan panjang",
+        "floral cardigan wanita Indonesia",
+        "outer bunga outfit layering"
+      ],
+      "description": [
+        "OOTD outer motif bunga",
+        "inspirasi outfit outer floral",
+        "cardigan bunga wanita",
+        "layering outfit motif bunga",
+        "outer floral casual",
+        "inspirasi OOTD outer bunga",
+        "fashion outer motif bunga",
+        "cardigan floral wanita Indonesia",
+        "jaket motif bunga wanita",
+        "Pinterest fashion outer"
+      ]
+    },
+    "setelan": {
+      "title": [
+        "setelan motif bunga",
+        "floral setelan wanita",
+        "co-ord set motif bunga",
+        "setelan bunga rayon",
+        "matching set floral wanita",
+        "setelan kulot motif bunga",
+        "floral one set wanita",
+        "setelan bunga casual",
+        "setelan rayon premium floral",
+        "outfit setelan motif bunga Indonesia"
+      ],
+      "description": [
+        "OOTD setelan motif bunga",
+        "inspirasi outfit setelan floral",
+        "co-ord set motif bunga",
+        "matching set floral wanita",
+        "setelan floral wanita",
+        "inspirasi OOTD setelan bunga",
+        "fashion setelan motif bunga",
+        "setelan casual motif bunga",
+        "baju setelan bunga wanita",
+        "Pinterest fashion setelan"
+      ]
+    },
+    "unknown": {
+      "title": [
+        "floral fashion wanita",
+        "pakaian motif bunga",
+        "baju bunga wanita Indonesia",
+        "outfit floral casual",
+        "fashion wanita motif bunga"
+      ],
+      "description": [
+        "OOTD floral fashion",
+        "inspirasi outfit motif bunga",
+        "fashion wanita Indonesia",
+        "baju bunga casual",
+        "Pinterest style floral"
+      ]
+    }
+  }
+}

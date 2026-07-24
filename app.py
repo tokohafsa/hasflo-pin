@@ -6,49 +6,32 @@
 import os
 import re
 import json
-import io
 import streamlit as st
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from PIL import Image
 
 from image_generator import (
     build_prompt_json,
     LAYOUT_OPTIONS,
     CANVAS_OPTIONS,
 )
+from title_desc_generator import (
+    get_seo_title_keywords,
+    get_seo_desc_keywords,
+    load_seo_keywords,
+)
 
 WIB = ZoneInfo("Asia/Jakarta")
 
-
 # ============================================================
-# HELPER — FIT IMAGE KE CANVAS DENGAN DOMINANT COLOR FILL
+# PAGE CONFIG
 # ============================================================
-
-def fit_to_canvas_dominant(img_bytes: bytes, canvas_w: int, canvas_h: int) -> bytes:
-    """
-    Resize gambar proporsional ke canvas_w x canvas_h.
-    Sisa area diisi warna dominan gambar (via Pillow quantize).
-    Return: bytes JPEG
-    """
-    img = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-    try:
-        quantized = img.quantize(colors=5, method=Image.Quantize.MEDIANCUT)
-        palette   = quantized.getpalette()
-        dominant  = tuple(palette[:3])
-    except Exception:
-        dominant  = (255, 255, 255)
-    img.thumbnail((canvas_w, canvas_h), Image.LANCZOS)
-    canvas   = Image.new("RGB", (canvas_w, canvas_h), dominant)
-    offset_x = (canvas_w - img.width) // 2
-    offset_y = (canvas_h - img.height) // 2
-    canvas.paste(img, (offset_x, offset_y))
-    buf = io.BytesIO()
-    canvas.save(buf, format="JPEG", quality=95)
-    return buf.getvalue()
-
 
 st.set_page_config(page_title="HASflo Prompt Generator", page_icon="🌸", layout="wide")
+
+# ============================================================
+# SIDEBAR
+# ============================================================
 
 with st.sidebar:
     st.markdown("### 🌸 HASflo Prompt Generator")
@@ -57,9 +40,12 @@ with st.sidebar:
     st.link_button("🌸 HAS_flo Pinterest", "https://id.pinterest.com/HAS_flo/", use_container_width=True)
     st.link_button("🤖 ChatGPT", "https://chatgpt.com/", use_container_width=True)
     st.link_button("🛒 Shopee Affiliate Custom Link", "https://affiliate.shopee.co.id/offer/custom_link", use_container_width=True)
-    st.link_button("💾 GitHub Repo", "https://github.com/tokohafsa/hasflo-pin", use_container_width=True)
     st.divider()
     st.caption("File output tersimpan di folder `output/`")
+
+# ============================================================
+# KONSTANTA
+# ============================================================
 
 BOARD_HIJAB  = "Fashion Outfit Hijab Motif Bunga"
 BOARD_MODERN = "Fashion Outfit Modern Motif Bunga"
@@ -93,39 +79,9 @@ PRODUCT_TYPE_LABELS = {
     "setelan": "Setelan",
 }
 
-SEO_KEYWORDS = {
-    "dress": [
-        "OOTD dress motif bunga", "dress motif bunga", "inspirasi outfit dress floral",
-        "dress bunga wanita", "outfit kondangan motif bunga", "dress midi floral",
-        "baju pesta motif bunga", "inspirasi OOTD wanita Indonesia",
-        "dress floral elegan", "fashion wanita motif bunga",
-    ],
-    "blouse": [
-        "OOTD blouse motif bunga", "blouse motif bunga", "inspirasi outfit blouse floral",
-        "atasan bunga wanita", "outfit kerja motif bunga", "blouse floral casual",
-        "kemeja motif bunga wanita", "inspirasi OOTD atasan bunga",
-        "fashion atasan motif bunga", "blouse wanita Indonesia",
-    ],
-    "tunik": [
-        "OOTD tunik motif bunga", "tunik motif bunga", "inspirasi outfit tunik floral",
-        "tunik bunga muslimah", "baju tunik motif bunga", "tunik floral hijab",
-        "outfit tunik wanita Indonesia", "inspirasi OOTD tunik bunga",
-        "fashion muslimah motif bunga", "tunik casual motif bunga",
-    ],
-    "outer": [
-        "OOTD outer motif bunga", "outer motif bunga", "inspirasi outfit outer floral",
-        "cardigan bunga wanita", "jaket motif bunga wanita", "layering outfit motif bunga",
-        "outer floral casual", "inspirasi OOTD outer bunga",
-        "fashion outer motif bunga", "cardigan floral wanita Indonesia",
-    ],
-    "setelan": [
-        "OOTD setelan motif bunga", "setelan motif bunga", "inspirasi outfit setelan floral",
-        "baju setelan bunga wanita", "co-ord set motif bunga", "matching set motif bunga",
-        "setelan floral wanita", "inspirasi OOTD setelan bunga",
-        "fashion setelan motif bunga", "setelan casual motif bunga",
-    ],
-}
-
+# ============================================================
+# HELPERS
+# ============================================================
 
 def detect_product_type(judul: str) -> str:
     judul_lower = judul.lower()
@@ -141,13 +97,14 @@ def get_board_from_hijab(is_hijab: bool, product_type: str) -> str:
     return BOARD_HIJAB if is_hijab else BOARD_MODERN
 
 
-def scan_model_files(is_hijab: bool, models_dir: str = None) -> list:
-    if models_dir is None:
-        models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
+def scan_model_files(is_hijab: bool, models_dir: str = "assets/models") -> list:
     if not os.path.isdir(models_dir):
         return []
-    exts = {".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG", ".JPEG", ".WEBP"}
-    files = sorted([f for f in os.listdir(models_dir) if os.path.splitext(f)[1].lower() in exts])
+    exts = {".png", ".jpg", ".jpeg", ".webp"}
+    files = sorted([
+        f for f in os.listdir(models_dir)
+        if os.path.splitext(f)[1].lower() in exts
+    ])
     result = []
     for f in files:
         stem = os.path.splitext(f)[0]
@@ -158,13 +115,18 @@ def scan_model_files(is_hijab: bool, models_dir: str = None) -> list:
             result.append(stem)
     return result
 
+# ============================================================
+# SESSION STATE DEFAULTS
+# ============================================================
 
 CLEAR_KEYS = [
     "image_urls", "url_slots", "judul_input_field",
     "shopee_affiliate_link", "generated_title", "generated_desc",
     "title_desc_done", "_product_type_val", "_judul_checked",
-    "last_prompt_json", "use_model_ref", "selected_model_name",
-    "canvas_size_label", "selected_board", "selected_section", "is_hijab",
+    "last_prompt_json",
+    "use_model_ref", "selected_model_name",
+    "canvas_size_label",
+    "selected_board", "selected_section", "is_hijab",
     "title_edit", "desc_edit",
 ]
 
@@ -190,31 +152,12 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# Default values untuk variabel yang dipakai downstream
-# Akan di-override jika _judul_checked = True dan user mengisi Step 3/4
-selected_model_name = None
-subject_desc = "female, warm Indonesian face, wearing hijab, 25 years old"
+# ============================================================
+# TITLE
+# ============================================================
 
 st.title("🌸 HASflo Prompt Generator")
 st.caption("Generate prompt collage siap pakai untuk Midjourney, Gemini, atau ChatGPT.")
-st.divider()
-
-# ============================================================
-# STEP 1A — LINK AFFILIATE SHOPEE
-# ============================================================
-
-st.subheader("Step 1A — 🔗 Link Affiliate Shopee *(opsional)*")
-st.caption("Akan disertakan di deskripsi.txt dalam folder `ready_pin/` di Dropbox untuk agent Pinterest.")
-
-shopee_affiliate_link = st.text_input(
-    "Link affiliate Shopee:",
-    placeholder="https://s.shopee.co.id/AAFmsXfSnq.",
-    key="shopee_affiliate_link",
-)
-if shopee_affiliate_link.strip():
-    shopee_affiliate_link = shopee_affiliate_link.strip().rstrip(".")
-    st.markdown(f'✅ Link affiliate: <a href="{shopee_affiliate_link}" target="_blank">{shopee_affiliate_link}</a>', unsafe_allow_html=True)
-
 st.divider()
 
 # ============================================================
@@ -224,11 +167,6 @@ st.divider()
 st.header("Step 1 — Input URL Gambar Produk")
 
 if st.button("🗑️ Clear Semua — Input Baru", key="btn_clear_all"):
-    # Hapus semua url_slot_N widget keys dulu sebelum clear url_slots
-    _n_slots = len(st.session_state.get("url_slots", [""]))
-    for _i in range(_n_slots):
-        if f"url_slot_{_i}" in st.session_state:
-            del st.session_state[f"url_slot_{_i}"]
     for k in CLEAR_KEYS:
         if k in st.session_state:
             del st.session_state[k]
@@ -237,7 +175,6 @@ if st.button("🗑️ Clear Semua — Input Baru", key="btn_clear_all"):
             key = f"{suffix}{layout['name']}"
             if key in st.session_state:
                 del st.session_state[key]
-    st.session_state["url_slots"] = [""]
     st.rerun()
 
 st.caption("Isi satu URL per field. Field baru muncul otomatis setelah field sebelumnya diisi.")
@@ -246,24 +183,12 @@ if "url_slots" not in st.session_state or not st.session_state["url_slots"]:
     st.session_state["url_slots"] = [""]
 
 for i in range(len(st.session_state["url_slots"])):
-    _col_url, _col_clr = st.columns([10, 1])
-    with _col_url:
-        st.session_state["url_slots"][i] = st.text_input(
-            f"URL gambar {i + 1}:",
-            value=st.session_state["url_slots"][i],
-            key=f"url_slot_{i}",
-            placeholder="https://down-id.img.susercontent.com/file/xxx.webp",
-        )
-    with _col_clr:
-        st.markdown("<div style='margin-top:28px'>", unsafe_allow_html=True)
-        if st.button("✕", key=f"clr_slot_{i}", help="Hapus URL ini"):
-            st.session_state["url_slots"].pop(i)
-            if f"url_slot_{i}" in st.session_state:
-                del st.session_state[f"url_slot_{i}"]
-            if not st.session_state["url_slots"]:
-                st.session_state["url_slots"] = [""]
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.session_state["url_slots"][i] = st.text_input(
+        f"URL gambar {i + 1}:",
+        value=st.session_state["url_slots"][i],
+        key=f"url_slot_{i}",
+        placeholder="https://down-id.img.susercontent.com/file/xxx.webp",
+    )
 
 if st.session_state["url_slots"][-1].strip():
     st.session_state["url_slots"].append("")
@@ -290,13 +215,34 @@ canvas_labels = [CANVAS_OPTIONS[k]["label"] for k in canvas_key_options]
 if "canvas_size_label" not in st.session_state:
     st.session_state["canvas_size_label"] = _random.choice(canvas_labels)
 
-selected_canvas_label = st.selectbox("Ukuran canvas:", options=canvas_labels, key="canvas_size_label")
+selected_canvas_label = st.selectbox(
+    "Ukuran canvas:",
+    options=canvas_labels,
+    key="canvas_size_label",
+)
 selected_canvas_key = canvas_key_options[canvas_labels.index(selected_canvas_label)]
 
 st.divider()
 
 # ============================================================
-# STEP 2 — JUDUL PRODUK + CEK
+# STEP 1B — LINK AFFILIATE SHOPEE
+# ============================================================
+
+st.subheader("Step 1B — 🔗 Link Affiliate Shopee *(opsional)*")
+st.caption("Akan disertakan di deskripsi.txt dalam ZIP untuk agent Pinterest.")
+
+shopee_affiliate_link = st.text_input(
+    "Link affiliate Shopee:",
+    placeholder="https://shope.ee/xxxx atau link custom affiliate",
+    key="shopee_affiliate_link",
+)
+if shopee_affiliate_link.strip():
+    st.success("✅ Link affiliate disimpan.")
+
+st.divider()
+
+# ============================================================
+# STEP 2 — JUDUL PRODUK + CEK + GENERATE
 # ============================================================
 
 st.header("Step 2 — Judul Produk & Generate Title Pinterest")
@@ -320,8 +266,7 @@ if st.button("🔍 Cek Judul", disabled=not can_cek, key="btn_cek_judul"):
     st.session_state["title_desc_done"] = False
 
 # ============================================================
-# STEP 2B — SECTION + HIJAB + BOARD + GENERATE
-# (muncul setelah Cek Judul)
+# STEP 2B — SECTION + HIJAB + BOARD
 # ============================================================
 
 if st.session_state.get("_judul_checked"):
@@ -374,40 +319,46 @@ if st.session_state.get("_judul_checked"):
 
     selected_board   = get_board_from_hijab(is_hijab, product_type)
     selected_section = SECTION_MAP.get(product_type, "Dress")
+
     st.session_state["selected_board"]   = selected_board
     st.session_state["selected_section"] = selected_section
+
     st.caption(f"📌 Pin akan masuk: **{selected_board}** › **{selected_section}**")
 
     st.markdown("---")
 
+    # ── Generate judul & deskripsi ──────────────────────────
     if st.button("✨ Generate Judul & Deskripsi", key="btn_gen_titledesc", type="primary"):
         with st.spinner("Generating via Gemini..."):
             try:
-                from _credentials import AI_API_KEY, AI_MODEL
+                from config import AI_API_KEY, AI_MODEL
                 from google import genai
 
                 client = genai.Client(api_key=AI_API_KEY)
-                label    = PRODUCT_TYPE_LABELS.get(product_type, "Busana")
-                keywords = ", ".join(SEO_KEYWORDS.get(product_type, [])[:6])
+
+                label      = PRODUCT_TYPE_LABELS.get(product_type, "Busana")
+                title_kws  = ", ".join(get_seo_title_keywords(product_type)[:6])
+                desc_kws   = ", ".join(get_seo_desc_keywords(product_type)[:6])
 
                 prompt_ai = f"""Kamu adalah asisten konten Pinterest untuk akun fashion wanita motif bunga Indonesia.
 
 Judul asli produk Shopee: {judul_input}
 Tipe produk: {product_type} ({label})
-Keyword SEO Pinterest yang tersedia: {keywords}
+Keyword SEO untuk JUDUL: {title_kws}
+Keyword SEO untuk DESKRIPSI: {desc_kws}
 
 TUGAS 1 — JUDUL Pinterest (max 100 karakter):
-- Format wajib: [Tipe Outfit] + "Motif Bunga" + ciri khas produk (bahan/potongan/panjang/warna jika ada di judul)
-- Contoh: "Dress Motif Bunga Midi Rayon Lengan Panjang", "Blouse Motif Bunga Oversized Casual"
+- Bebas kreatif, ikut keyword trending dari daftar keyword judul di atas
+- Natural, tidak hard-selling, campuran Indonesia-Inggris boleh
+- Harus mencerminkan tipe produk "{label}"
 - Kata "OOTD" TIDAK perlu masuk judul — simpan untuk deskripsi
-- Natural, tidak hard-selling, tidak mengandung kata promo/diskon/murah
 
 TUGAS 2 — DESKRIPSI Pinterest (max 500 karakter):
-- Kalimat 1 WAJIB: salin judul asli produk Shopee APA ADANYA sebagai kalimat pertama — VERBATIM
+- Kalimat 1 WAJIB: salin judul asli produk Shopee APA ADANYA — VERBATIM, tidak diubah, tidak disingkat, tidak dibersihkan
 - Kalimat 2 WAJIB: harus mengandung kata "OOTD" dan "motif bunga"
-- Kalimat 3-4: masukkan minimal 3 keyword lain dari daftar secara natural
-- Seluruh deskripsi: Bahasa Indonesia, faktual, deskriptif, TIDAK persuasif
-- DILARANG: "dapatkan sekarang", "segera beli", "klik link", "harga spesial", "promo"
+- Kalimat 3-4: masukkan minimal 3 keyword dari daftar keyword deskripsi secara natural dalam kalimat
+- Seluruh deskripsi: Bahasa Indonesia, faktual, deskriptif, TIDAK persuasif, TIDAK ada kata sales/marketing
+- DILARANG: "dapatkan sekarang", "segera beli", "klik link", "harga spesial", "promo", atau kata ajakan beli apapun
 
 Output HANYA JSON (tanpa markdown backtick):
 {{"title": "...", "description": "..."}}"""
@@ -417,13 +368,14 @@ Output HANYA JSON (tanpa markdown backtick):
                 data = json.loads(text)
 
                 st.session_state["generated_title"] = data.get("title", "")[:100]
-                st.session_state["generated_desc"]  = data.get("description", "")[:500]
-                st.session_state["title_desc_done"]  = True
+                st.session_state["generated_desc"] = data.get("description", "")[:500]
+                st.session_state["title_desc_done"] = True
 
             except Exception as e:
                 st.error(f"❌ Gemini error: {e}")
                 st.session_state["title_desc_done"] = False
 
+    # ── Tampilkan hasil ─────────────────────────────────────
     if st.session_state.get("title_desc_done"):
         st.markdown("---")
         col_t, col_d = st.columns([1, 1])
@@ -433,10 +385,13 @@ Output HANYA JSON (tanpa markdown backtick):
             title_edited = st.text_area(
                 label="title_edit_area",
                 value=st.session_state["generated_title"],
-                height=80, max_chars=100,
-                key="title_edit", label_visibility="collapsed",
+                height=80,
+                max_chars=100,
+                key="title_edit",
+                label_visibility="collapsed",
             )
-            st.caption(f"{'🟢' if len(title_edited) <= 100 else '🔴'} {len(title_edited)}/100 karakter")
+            n_t = len(title_edited)
+            st.caption(f"{'🟢' if n_t <= 100 else '🔴'} {n_t}/100 karakter")
             st.code(title_edited, language=None)
 
         with col_d:
@@ -444,161 +399,117 @@ Output HANYA JSON (tanpa markdown backtick):
             desc_edited = st.text_area(
                 label="desc_edit_area",
                 value=st.session_state["generated_desc"],
-                height=150, max_chars=500,
-                key="desc_edit", label_visibility="collapsed",
+                height=150,
+                max_chars=500,
+                key="desc_edit",
+                label_visibility="collapsed",
             )
-            st.caption(f"{'🟢' if len(desc_edited) <= 500 else '🔴'} {len(desc_edited)}/500 karakter")
+            n_d = len(desc_edited)
+            st.caption(f"{'🟢' if n_d <= 500 else '🔴'} {n_d}/500 karakter")
             st.code(desc_edited, language=None)
 
 st.divider()
 
 # ============================================================
 # STEP 3 — MODEL REFERENCE
-# Hanya muncul setelah _judul_checked = True
-# → is_hijab sudah pasti ter-set dari Step 2B
 # ============================================================
 
 st.header("Step 3 — Model Reference *(opsional)*")
+st.caption(
+    "Aktifkan untuk menyertakan gambar wajah/model sebagai referensi visual. "
+    "File model difilter otomatis berdasarkan pilihan Hijab/Non-Hijab di Step 2B."
+)
 
-if not st.session_state.get("_judul_checked"):
-    st.info("⬆️ Isi judul produk di Step 2 dan klik **Cek Judul** untuk melanjutkan.")
-else:
-    st.caption(
-        "Aktifkan untuk menyertakan gambar wajah/model sebagai referensi visual. "
-        "File model difilter otomatis berdasarkan pilihan Hijab/Non-Hijab di Step 2B."
-    )
+_is_hijab_now = st.session_state.get("is_hijab", True)
+MODEL_LIST = scan_model_files(_is_hijab_now)
 
-    _is_hijab_now = st.session_state.get("is_hijab", True)
-    MODEL_LIST = scan_model_files(_is_hijab_now)
+use_model_ref = st.toggle(
+    "Gunakan Model Reference",
+    value=st.session_state.get("use_model_ref", False),
+    key="use_model_ref",
+    help="Gambar model dari assets/models/ akan diupload pertama ke GPT.",
+)
 
-    use_model_ref = st.toggle(
-        "Gunakan Model Reference",
-        value=st.session_state.get("use_model_ref", False),
-        key="use_model_ref",
-        help="Gambar model dari assets/models/ akan diupload pertama ke GPT.",
-    )
-
-    if use_model_ref:
-        if not MODEL_LIST:
-            _tag = "hijab" if _is_hijab_now else "non-hijab"
-            _models_dir_dbg = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
-            st.warning(
-                f"⚠️ Tidak ada file model {_tag} ditemukan di `assets/models/`. "
-                f"{'Tambahkan file dengan kata \"hijab\" di nama file.' if _is_hijab_now else 'Tambahkan file tanpa kata \"hijab\" di nama file.'}"
-            )
-            st.caption(f"🔍 Debug path: `{_models_dir_dbg}` — exists: `{os.path.isdir(_models_dir_dbg)}`")
-            if os.path.isdir(_models_dir_dbg):
-                _all_files = os.listdir(_models_dir_dbg)
-                st.caption(f"Files ditemukan: `{_all_files}`")
-        else:
-            selected_model_name = st.selectbox(
-                "Pilih model:",
-                options=MODEL_LIST,
-                key="selected_model_name",
-            )
-            model_exts = [".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG", ".webp", ".WEBP"]
-            model_preview_path = None
-            if selected_model_name:
-                _models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "models")
-                for ext in model_exts:
-                    candidate = os.path.join(_models_dir, selected_model_name + ext)
-                    if os.path.isfile(candidate):
-                        model_preview_path = candidate
-                        break
-            if model_preview_path:
-                col_mp, col_mi = st.columns([1, 3])
-                with col_mp:
-                    st.image(model_preview_path, width=100)
-                with col_mi:
-                    st.success(f"✅ Model: **{selected_model_name}**")
-                    st.caption("Gambar ini akan diupload ke GPT sebagai gambar pertama.")
+selected_model_name = None
+if use_model_ref:
+    if not MODEL_LIST:
+        _tag = "hijab" if _is_hijab_now else "non-hijab"
+        st.warning(
+            f"⚠️ Tidak ada file model {_tag} ditemukan di `assets/models/`. "
+            f"{'Tambahkan file dengan kata \"hijab\" di nama file.' if _is_hijab_now else 'Tambahkan file tanpa kata \"hijab\" di nama file.'}"
+        )
+    else:
+        selected_model_name = st.selectbox(
+            "Pilih model:",
+            options=MODEL_LIST,
+            key="selected_model_name",
+        )
+        model_exts = [".png", ".jpg", ".jpeg", ".webp"]
+        model_preview_path = None
+        if selected_model_name:
+            for ext in model_exts:
+                candidate = os.path.join("assets/models", selected_model_name + ext)
+                if os.path.isfile(candidate):
+                    model_preview_path = candidate
+                    break
+        if model_preview_path:
+            col_mp, col_mi = st.columns([1, 3])
+            with col_mp:
+                st.image(model_preview_path, width=100)
+            with col_mi:
+                st.success(f"✅ Model: **{selected_model_name}**")
+                st.caption("Gambar ini akan diupload ke GPT sebagai gambar pertama.")
 
 st.divider()
 
 # ============================================================
 # STEP 4 — SUBJECT
-# Hanya muncul setelah _judul_checked = True
-# → is_hijab sudah pasti ter-set, ras terkunci kalau hijab
 # ============================================================
 
 st.header("Step 4 — Deskripsi Subject")
 
-if not st.session_state.get("_judul_checked"):
-    st.info("⬆️ Isi judul produk di Step 2 dan klik **Cek Judul** untuk melanjutkan.")
+_age_options = ["18 years old", "25 years old", "33 years old"]
+
+_is_hijab_subject = st.session_state.get("is_hijab", True)
+if _is_hijab_subject:
+    _nationality_options = ["Indonesian"]
 else:
-    _age_options = ["18 years old", "25 years old", "33 years old"]
+    _nationality_options = ["Indonesian", "Japanese", "Korean"]
 
-    # ── Deteksi nationality dari nama model (jika toggle model ON) ──
-    _use_model_now  = st.session_state.get("use_model_ref", False)
-    _model_name_now = st.session_state.get("selected_model_name", "") or ""
-    _model_lower    = _model_name_now.lower()
-    _is_hijab_subject = st.session_state.get("is_hijab", True)
+col_s1, col_s2 = st.columns(2)
 
-    # Deteksi tipe model dari nama file
-    _model_is_indo  = _use_model_now and (
-        _model_lower.startswith("indo") or "indonesian" in _model_lower
-    )
-    _model_is_asian = _use_model_now and (
-        _model_lower.startswith("asian") or "asian" in _model_lower
-    )
+with col_s1:
+    subject_age = st.selectbox("Usia:", options=_age_options, key="subject_age")
 
-    # Tentukan nationality options & lock state
-    if _use_model_now and _model_is_indo:
-        # Model Indo/IndoHijab → terkunci Indonesian
-        _nationality_options  = ["Indonesian"]
-        _nationality_disabled = True
-        _nationality_help     = "Terkunci Indonesian sesuai model reference yang dipilih."
-    elif _use_model_now and _model_is_asian:
-        # Model Asian → Korean, Chinese, Japanese (tanpa Indonesian)
-        _nationality_options  = ["Korean", "Chinese", "Japanese"]
-        _nationality_disabled = False
-        _nationality_help     = "Nationality disesuaikan dengan model Asian yang dipilih."
-    elif _is_hijab_subject:
-        # Hijab tanpa model → terkunci Indonesian
-        _nationality_options  = ["Indonesian"]
-        _nationality_disabled = True
-        _nationality_help     = "Terkunci Indonesian karena konten Hijab."
-    else:
-        # Default — bebas pilih
-        _nationality_options  = ["Indonesian", "Korean", "Chinese", "Japanese"]
-        _nationality_disabled = False
-        _nationality_help     = ""
-
-    col_s1, col_s2 = st.columns(2)
-
-    with col_s1:
-        subject_age = st.selectbox("Usia:", options=_age_options, key="subject_age")
-
-    with col_s2:
-        subject_nationality = st.selectbox(
-            "Nationality:",
-            options=_nationality_options,
-            key="subject_nationality",
-            disabled=_nationality_disabled,
-            help=_nationality_help,
-        )
-
-    subject_custom = st.text_input(
-        "Atau tulis sendiri (opsional, menggantikan pilihan di atas jika diisi):",
-        placeholder="contoh: female model, East African face, 30 years old, natural hair",
-        key="subject_custom",
+with col_s2:
+    subject_nationality = st.selectbox(
+        "Nationality:",
+        options=_nationality_options,
+        key="subject_nationality",
+        disabled=_is_hijab_subject,
+        help="Terkunci Indonesian kalau konten Hijab." if _is_hijab_subject else "",
     )
 
-    if subject_custom.strip():
-        custom = subject_custom.strip()
-        subject_desc = f"female, {custom}" if "female" not in custom.lower() else custom
-    else:
-        nationality_map = {
-            "Indonesian": "warm Indonesian face",
-            "Korean":     "Korean face",
-            "Chinese":    "Chinese face",
-            "Japanese":   "Japanese face",
-        }
-        nat_str       = nationality_map.get(subject_nationality, "warm Indonesian face")
-        hijab_str     = ", wearing hijab" if _is_hijab_subject else ", no hijab"
-        subject_desc  = f"female, {nat_str}{hijab_str}, {subject_age}"
+subject_custom = st.text_input(
+    "Atau tulis sendiri (opsional, menggantikan pilihan di atas jika diisi):",
+    placeholder="contoh: female model, East African face, 30 years old, natural hair",
+    key="subject_custom",
+)
 
-    st.caption(f"Subject: `{subject_desc}`")
+if subject_custom.strip():
+    custom = subject_custom.strip()
+    subject_desc = f"female, {custom}" if "female" not in custom.lower() else custom
+else:
+    nationality_map = {
+        "Indonesian": "warm Indonesian face",
+        "Japanese":   "Japanese face",
+        "Korean":     "Korean face",
+    }
+    nat_str = nationality_map.get(subject_nationality, "warm Indonesian face")
+    hijab_str = ", wearing hijab" if _is_hijab_subject else ", no hijab"
+    subject_desc = f"female, {nat_str}{hijab_str}, {subject_age}"
+
+st.caption(f"Subject: `{subject_desc}`")
 
 st.divider()
 
@@ -641,7 +552,7 @@ else:
 
                         slot_options = [3, 4, 5, 6, 7]
                         default_slot = layout.get("n_photo_slots", 4)
-                        default_idx  = slot_options.index(default_slot) if default_slot in slot_options else 1
+                        default_idx = slot_options.index(default_slot) if default_slot in slot_options else 1
                         st.selectbox(
                             "Jumlah photo slot:",
                             options=slot_options,
@@ -688,7 +599,7 @@ st.divider()
 st.header("Step 6 — Generate Prompt")
 
 n_ref_images = len(st.session_state.get("image_urls", []))
-can_generate  = n_ref_images >= 1 and bool(LAYOUT_OPTIONS)
+can_generate = n_ref_images >= 1 and bool(LAYOUT_OPTIONS)
 
 if not can_generate:
     st.warning("⚠️ Masukkan minimal 1 URL gambar di Step 1 untuk bisa generate prompt.")
@@ -707,6 +618,7 @@ if st.button("✨ Generate Prompt", type="primary", disabled=not can_generate, k
             highlight=highlight_mode,
             model_name=(selected_model_name if st.session_state.get("use_model_ref") else None),
         )
+
         st.session_state["last_prompt_json"] = prompt_dict
 
 # ============================================================
@@ -732,10 +644,9 @@ if st.session_state.get("last_prompt_json"):
         st.markdown("---")
 
     st.markdown("**🎨 Prompt Collage** (paste ke Midjourney / Gemini / ChatGPT):")
-    with st.expander("📄 Lihat & Copy Prompt", expanded=False):
-        st.code(prompt_dict["prompt"], language=None, wrap_lines=True)
+    st.code(prompt_dict["prompt"], language=None, wrap_lines=True)
 
-    image_urls     = st.session_state.get("image_urls", [])
+    image_urls  = st.session_state.get("image_urls", [])
     layout_preview = selected_layout.get("preview_path", "")
 
     sum_cols = st.columns(len(image_urls) + 1) if image_urls else st.columns(1)
@@ -778,35 +689,40 @@ if st.session_state.get("last_prompt_json"):
     )
 
     if st.button("☁️ Upload Bahan Prompt ke Dropbox", key="btn_upload_bahan", type="primary", use_container_width=True):
+        import io as _io
         import requests as _requests
-        import os as _os
+        import tempfile, os as _os
         from dropbox_client import upload_bytes as _dbx_upload_bytes, _get_access_token as _dbx_token
 
         try:
-            from _credentials import (
-                DROPBOX_APP_KEY, DROPBOX_APP_SECRET,
-                DROPBOX_REFRESH_TOKEN, DROPBOX_FOLDER,
+            from config import (
+                DROPBOX_APP_KEY,
+                DROPBOX_APP_SECRET,
+                DROPBOX_REFRESH_TOKEN,
+                DROPBOX_FOLDER,
             )
         except ImportError as e:
             st.error(f"❌ Config Dropbox tidak ditemukan: {e}")
             st.stop()
 
-        image_urls   = st.session_state.get("image_urls", [])
-        layout_prev  = selected_layout.get("preview_path", "")
+        image_urls    = st.session_state.get("image_urls", [])
+        layout_prev   = selected_layout.get("preview_path", "")
 
         _canvas_ratio = CANVAS_OPTIONS.get(selected_canvas_key, {}).get("ratio", "")
         _ratio_prefix = f"[{_canvas_ratio.replace(':', 'x')}]" if _canvas_ratio else ""
         judul_asli    = st.session_state.get("judul_input_field", "").strip()
-        _safe         = re.sub(r'[\\/*?:"<>|]', "", judul_asli).strip().replace(" ", "_")[:20] if judul_asli else "hasflo_pin"
+        _safe         = re.sub(r'[\\/*?:"<>|]', "", judul_asli).strip().replace(" ", "_")[:50] if judul_asli else "hasflo_pin"
         _datestamp    = datetime.now().strftime("%Y%m%d")
-        folder_name   = f"{_safe}_{_ratio_prefix}_{_datestamp}"
+        folder_name   = f"{_ratio_prefix}{_safe}_{_datestamp}"
 
         _use_model    = st.session_state.get("use_model_ref", False)
         _model_name   = st.session_state.get("selected_model_name") if _use_model else None
         _outfit_start = 2 if (_use_model and _model_name) else 1
 
-        dbx_bp = f"{DROPBOX_FOLDER.rstrip('/')}/{folder_name}/bahan_prompt"
-        errors, uploads = [], []
+        dbx_bp        = f"{DROPBOX_FOLDER.rstrip('/')}/{folder_name}/bahan_prompt"
+
+        errors  = []
+        uploads = []
 
         _prog = st.progress(0, text="Menghubungkan ke Dropbox...")
 
@@ -840,11 +756,10 @@ if st.session_state.get("last_prompt_json"):
         step += 1
         if _use_model and _model_name:
             _prog.progress(int(step / total_steps * 100), text="Upload model reference...")
-            _model_exts = [".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG", ".webp", ".WEBP"]
+            _model_exts = [".png", ".jpg", ".jpeg", ".webp"]
             _model_path = None
-            _models_dir = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "assets", "models")
             for _ext in _model_exts:
-                _c = _os.path.join(_models_dir, _model_name + _ext)
+                _c = _os.path.join("assets/models", _model_name + _ext)
                 if _os.path.isfile(_c):
                     _model_path = _c
                     break
@@ -854,12 +769,7 @@ if st.session_state.get("last_prompt_json"):
                     _dbx_upload_bytes(_mf.read(), f"{dbx_bp}/_model_ref.{_mext}", _token)
                 uploads.append(f"_model_ref.{_mext}")
             else:
-                _all_files = _os.listdir(_models_dir) if _os.path.isdir(_models_dir) else []
-                errors.append(
-                    f"File model '{_model_name}' tidak ditemukan. "
-                    f"Path: {_models_dir} | "
-                    f"Files: {_all_files}"
-                )
+                errors.append(f"File model '{_model_name}' tidak ditemukan.")
 
         step += 1
         _prog.progress(int(step / total_steps * 100), text="Upload layout...")
@@ -874,32 +784,31 @@ if st.session_state.get("last_prompt_json"):
         step += 1
         _prog.progress(int(step / total_steps * 100), text="Upload prompt.txt...")
         try:
-            _dbx_upload_bytes(prompt_dict["prompt"].encode("utf-8"), f"{dbx_bp}/prompt.txt", _token)
+            _dbx_upload_bytes(
+                prompt_dict["prompt"].encode("utf-8"),
+                f"{dbx_bp}/prompt.txt",
+                _token,
+            )
             uploads.append("prompt.txt")
         except Exception as e:
             errors.append(f"prompt.txt: {e}")
 
         _prog.empty()
 
-        st.session_state["_folder_name"]    = folder_name
-        st.session_state["_outfit_files"]   = outfit_files
+        st.session_state["_folder_name"]   = folder_name
+        st.session_state["_outfit_files"]  = outfit_files
         st.session_state["_bahan_uploaded"] = True
 
-        for err in errors:
-            st.warning(f"⚠️ {err}")
+        if errors:
+            for err in errors:
+                st.warning(f"⚠️ {err}")
 
         if uploads:
             st.success(
                 f"✅ `bahan_prompt/` terupload ke Dropbox! ({len(uploads)} file) → "
                 f"`{DROPBOX_FOLDER.rstrip('/')}/{folder_name}/bahan_prompt/`"
             )
-            st.link_button(
-                "🤖 Buka ChatGPT — siap upload file",
-                "https://chatgpt.com/",
-                use_container_width=True,
-                type="primary",
-            )
-            st.caption("Buka Dropbox → ambil file dari `bahan_prompt/` → upload ke ChatGPT → paste prompt.txt → balik ke sini untuk Step 8.")
+            st.caption("Sekarang buka Dropbox → upload ke GPT → dapat hasil gambar → balik ke sini untuk Step 8.")
 
 # ============================================================
 # STEP 8 — UPLOAD HASIL GPT → READY PIN
@@ -917,7 +826,7 @@ else:
     _outfit_files = st.session_state.get("_outfit_files", {})
 
     st.caption(
-        f"Folder aktif: `{_folder_name}` — "
+        f"Folder aktif: `{st.session_state.get('_folder_name', '')}` — "
         "drag & drop hasil GPT di bawah, lalu upload `ready_pin/` ke Dropbox."
     )
 
@@ -950,9 +859,11 @@ else:
             from dropbox_client import upload_bytes as _dbx_upload_bytes, _get_access_token as _dbx_token
 
             try:
-                from _credentials import (
-                    DROPBOX_APP_KEY, DROPBOX_APP_SECRET,
-                    DROPBOX_REFRESH_TOKEN, DROPBOX_FOLDER,
+                from config import (
+                    DROPBOX_APP_KEY,
+                    DROPBOX_APP_SECRET,
+                    DROPBOX_REFRESH_TOKEN,
+                    DROPBOX_FOLDER,
                 )
             except ImportError as e:
                 st.error(f"❌ Config Dropbox tidak ditemukan: {e}")
@@ -960,12 +871,13 @@ else:
 
             title_pin      = st.session_state.get("title_edit", "").strip()
             desc_pin       = st.session_state.get("desc_edit", "").strip()
-            link_affiliate = st.session_state.get("shopee_affiliate_link", "").strip().rstrip(".")
+            link_affiliate = st.session_state.get("shopee_affiliate_link", "").strip()
             _board         = st.session_state.get("selected_board", BOARD_HIJAB)
             _section       = st.session_state.get("selected_section", "Dress")
             judul_asli     = st.session_state.get("judul_input_field", "").strip()
 
-            dbx_rp     = f"{DROPBOX_FOLDER.rstrip('/')}/{_folder_name}/ready_pin"
+            dbx_rp = f"{DROPBOX_FOLDER.rstrip('/')}/{_folder_name}/ready_pin"
+
             errors_rp  = []
             uploads_rp = []
 
@@ -990,13 +902,10 @@ else:
 
             for idx, (ext, data) in sorted(_outfit_files.items()):
                 step_rp += 1
-                _prog2.progress(int(step_rp / total_rp * 100), text=f"Processing image{idx}...")
+                _prog2.progress(int(step_rp / total_rp * 100), text=f"Upload image{idx}.{ext}...")
                 try:
-                    # Fit ke canvas ratio pilihan user dengan dominant color fill
-                    _canvas = CANVAS_OPTIONS.get(selected_canvas_key, CANVAS_OPTIONS["1000x1500"])
-                    _fitted = fit_to_canvas_dominant(data, _canvas["w"], _canvas["h"])
-                    _dbx_upload_bytes(_fitted, f"{dbx_rp}/image{idx}.jpg", _token)
-                    uploads_rp.append(f"image{idx}.jpg")
+                    _dbx_upload_bytes(data, f"{dbx_rp}/image{idx}.{ext}", _token)
+                    uploads_rp.append(f"image{idx}.{ext}")
                 except Exception as e:
                     errors_rp.append(f"image{idx}: {e}")
 
@@ -1020,44 +929,29 @@ else:
 
             _prog2.empty()
 
-            for err in errors_rp:
-                st.warning(f"⚠️ {err}")
+            # ── Rename folder parent: [nama] → READY_[nama] ──
+            try:
+                from dropbox_client import rename_folder as _dbx_rename, _get_access_token as _dbx_token2
+                from config import (
+                    DROPBOX_APP_KEY, DROPBOX_APP_SECRET,
+                    DROPBOX_REFRESH_TOKEN, DROPBOX_FOLDER,
+                )
+                _token2 = _dbx_token2(DROPBOX_APP_KEY, DROPBOX_APP_SECRET, DROPBOX_REFRESH_TOKEN)
+                old_path = f"{DROPBOX_FOLDER.rstrip('/')}/{_folder_name}"
+                new_name = f"READY_{_folder_name}"
+                new_path = f"{DROPBOX_FOLDER.rstrip('/')}/{new_name}"
+                _dbx_rename(old_path, new_path, _token2)
+                st.session_state["_folder_name"] = new_name
+            except Exception as e:
+                errors_rp.append(f"Rename folder gagal: {e}")
+
+            if errors_rp:
+                for err in errors_rp:
+                    st.warning(f"⚠️ {err}")
 
             if uploads_rp:
-                # ── Rename folder parent: tambah prefix READY_ ──
-                _old_parent = f"{DROPBOX_FOLDER.rstrip('/')}/{_folder_name}"
-                _new_folder_name = f"READY_{_folder_name}"
-                _new_parent = f"{DROPBOX_FOLDER.rstrip('/')}/{_new_folder_name}"
-                try:
-                    from dropbox_client import rename_folder as _dbx_rename
-                    _dbx_rename(_old_parent, _new_parent, _token)
-                    st.session_state["_folder_name"] = _new_folder_name
-                    st.success(
-                        f"✅ `ready_pin/` terupload! ({len(uploads_rp)} file) → "
-                        f"`{_new_parent}/ready_pin`"
-                    )
-                    st.info(f"📁 Folder direname → `{_new_folder_name}`")
-                except Exception as _e:
-                    st.success(
-                        f"✅ `ready_pin/` terupload! ({len(uploads_rp)} file) → "
-                        f"`{dbx_rp}`"
-                    )
-                    st.warning(f"⚠️ Rename folder gagal: {_e}")
+                st.success(
+                    f"✅ `ready_pin/` terupload! ({len(uploads_rp)} file) → "
+                    f"`{dbx_rp}`"
+                )
                 st.caption("Agent Pinterest siap memproses folder ini.")
-
-st.divider()
-if st.button("🌸 Input Baru — Produk Berikutnya", type="primary", use_container_width=True, key="btn_input_baru"):
-    _n_slots = len(st.session_state.get("url_slots", [""]))
-    for _i in range(_n_slots):
-        if f"url_slot_{_i}" in st.session_state:
-            del st.session_state[f"url_slot_{_i}"]
-    for k in CLEAR_KEYS:
-        if k in st.session_state:
-            del st.session_state[k]
-    for layout in LAYOUT_OPTIONS:
-        for suffix in ["n_photo_slots_", "highlight_"]:
-            key = f"{suffix}{layout['name']}"
-            if key in st.session_state:
-                del st.session_state[key]
-    st.session_state["url_slots"] = [""]
-    st.rerun()

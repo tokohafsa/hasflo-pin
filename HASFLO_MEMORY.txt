@@ -9,18 +9,61 @@ PINTEREST ACC : pinterest.com/has_flo  (nama akun: Hasna)
 SHOPEE AFF    : affiliate.shopee.co.id
 BIO PINTEREST : "Kurasi pilihan bertema bunga & hati terbaik untuk kamu | Bloom, Grow, Hasflo"
 AUDIENCE      : Female 56.4%, usia 18-34, Android dominan, Indonesia (target konversi Shopee)
+GITHUB REPO   : https://github.com/tokohafsa/hasflo-pin
 
 ================================================================
 STACK TEKNOLOGI
 ================================================================
 
-- Streamlit (app.py)
-- Playwright async (scraper.py) — headless Chromium + stealth patch
-- Gemini API via google-genai SDK (title/desc generation + scheduling)
+- Streamlit (app.py) — Streamlit Cloud deployment
+- Playwright async (scraper.py) — ABANDONED
+- Gemini API via google-genai SDK (title/desc generation + keyword analisa)
 - Dropbox API via requests langsung (OAuth2 refresh token)
-- Pinterest API v5 (rencana: pinterest_agent.py)
+- Postiz self-host via Docker — posting engine Pinterest
+- Hermes Agent (Nous Research) — koordinator otomasi + cron scheduler
+- Pinterest API v5 (rencana: analytics monitoring — menunggu approval)
 - Miniconda env_main, Windows lokal
 - Run via run.bat (PowerShell + --server.headless true)
+
+================================================================
+JAM PC AKTIF
+================================================================
+
+Senin–Sabtu : 09:00–19:00 WIB
+Minggu      : 09:00–19:00 WIB (disamakan, tidak dikecualikan)
+
+CATATAN: PC ini adalah PC kerja — Streamlit app dipakai
+manual saat jam aktif. Hermes + Postiz jalan lokal di PC
+yang sama. Tidak pakai VPS (menghindari kartu kredit).
+Jika PC mati saat jadwal cron → sesi tersebut skip, tidak ada retry.
+
+================================================================
+JADWAL HERMES CRON
+================================================================
+
+POSTING PIN — 4 sesi per hari, setiap hari (termasuk Minggu):
+  Sesi 1 : 09:30 WIB
+  Sesi 2 : 12:30 WIB
+  Sesi 3 : 15:30 WIB
+  Sesi 4 : 18:00 WIB
+
+KEYWORD UPDATE  : Senin 09:00 WIB (30 menit sebelum sesi 1)
+ANALYTICS REPORT: Senin 09:00 WIB (setelah keyword update selesai)
+
+TARGET POSTING:
+  Per hari    : 4 pin (kalau semua sesi PC aktif)
+  Per minggu  : 28 pin (maksimum)
+  Realistis   : ~20–24 pin/minggu (estimasi PC kadang mati)
+  Per bulan   : ~80–112 pin
+
+PERILAKU JIKA QUEUE KOSONG:
+  → Hermes skip diam-diam, tidak ada notifikasi
+
+DICORET:
+  - Slot 07:30 WIB (PC belum aktif)
+  - Slot 20:00 WIB (PC sudah mati jam 19:00)
+  - Libur Minggu (disamakan dengan hari lain)
+  - Slot tambahan 13:30 WIB (digantikan sistem 4 sesi tetap)
 
 ================================================================
 FILE STRUKTUR
@@ -29,15 +72,14 @@ FILE STRUKTUR
 G:\HASFLO_PINTEREST\
 ├── app.py                  — Streamlit UI utama
 ├── image_generator.py      — build_prompt_json(), LAYOUT_OPTIONS, CANVAS_OPTIONS
-├── scraper.py              — Playwright scraper Shopee
+├── scraper.py              — Playwright scraper Shopee (ABANDONED)
 ├── processor.py            — CSV bulk upload (single-image pin)
-├── title_desc_generator.py — Section judul & deskripsi Pinterest (terpisah dari app.py)
+├── title_desc_generator.py — Section judul & deskripsi Pinterest
 ├── dropbox_client.py       — Upload/rename/list Dropbox via OAuth2
-├── config.py               — API keys, konstanta (AI_ENABLED, AI_API_KEY, AI_MODEL,
-│                             DROPBOX_APP_KEY/SECRET/REFRESH_TOKEN, DROPBOX_FOLDER,
-│                             BOARD_SECTIONS, PRODUCT_KEYWORDS, KEYWORDS,
-│                             RANDOM_TIME_MIN/MAX_WIB, SCHEDULE_BUFFER_MINUTES, OUTPUT_DIR)
+├── config.py               — API keys, konstanta
 ├── templates.py            — Pool title & description per tipe produk (fallback tanpa AI)
+├── seo_keywords.json       — [BARU] Single source of truth SEO keywords
+│                             Di-update otomatis tiap Senin 09:00 WIB oleh Hermes
 ├── requirements.txt
 ├── run.bat
 ├── assets/                 — Layout JSON + preview JPG
@@ -50,34 +92,137 @@ G:\HASFLO_PINTEREST\
 └── output/                 — Output CSV bulk upload
 
 FILE RENCANA (belum dibuat):
-└── pinterest_agent.py      — AI agent local untuk post via Pinterest API v5
+└── pinterest_agent.py      — DIGANTIKAN oleh Hermes + Postiz (tidak jadi dibuat)
 
 ================================================================
 PIPELINE LENGKAP (Juli 2026)
 ================================================================
 
-JALUR A — CAROUSEL PIN (via API agent):
-  1. Input URL Shopee → scraper.py (Playwright headless + stealth patch)
+JALUR A — CAROUSEL PIN (via Hermes + Postiz):
+  1. Input URL Shopee manual → paste di app.py Step 1
   2. app.py Step 2: Gemini generate judul + deskripsi Pinterest
+     (judul: bebas kreatif ikut keyword trending dari seo_keywords.json)
+     (deskripsi kalimat 1: judul Shopee VERBATIM, tidak boleh diubah)
+     (deskripsi kalimat 2-dst: keyword trending dari seo_keywords.json)
   3. app.py Step 3: pilih model reference (opsional, filter hijab/non-hijab)
   4. app.py Step 4: deskripsi subject (usia, nationality, hijab/non-hijab)
   5. app.py Step 5: pilih layout collage (JSON dari assets/)
   6. app.py Step 6: generate prompt collage (build_prompt_json)
   7. app.py Step 7: upload bahan_prompt/ ke Dropbox
        → outfit images (imageN.jpg) + layout.jpg + prompt.txt
+       → folder name: [ratio_prefix][nama_produk]_[tanggal]
+         contoh: [2x3]Dress_Wanita_Motif_Bunga_20260725
   8. User: buka Dropbox → upload semua file ke GPT → dapat hasil collage
-  9. app.py Step 8: drag hasil GPT → app build + upload ready_pin/ ke Dropbox
+  9. app.py Step 8: drag hasil GPT → fit ke canvas + dominant color fill
+       → upload ready_pin/ ke Dropbox
+       → app rename folder parent: [nama] → READY_[nama]
        Struktur ready_pin/:
          slides/slide1.jpg   ← hasil GPT
-         image1.jpg          ← outfit ref 1
+         image1.jpg          ← outfit ref 1 (fitted ke canvas ratio)
          image2.jpg          ← outfit ref 2 (dst)
-         deskripsi.txt       ← Board/Section \n Judul \n Deskripsi \n Link affiliate
- 10. pinterest_agent.py: poll Dropbox → post carousel → rename ready_pin_DONE/
+         deskripsi.txt       ← Board/Section
+                                Judul pin
+                                Deskripsi pin
+                                Link affiliate Shopee
+ 10. Hermes: poll Dropbox → post ke Postiz → pindah ke DONE/
 
 JALUR B — SINGLE IMAGE PIN (via CSV bulk upload):
   1-2. Sama seperti Jalur A
   3. processor.py → generate CSV (shuffle, jadwal WIB→UTC, AI title/desc)
   4. Upload CSV ke Pinterest bulk upload tool
+
+================================================================
+DROPBOX STRUCTURE
+================================================================
+
+/HASflo/
+├── READY_[2x3]Dress_Wanita_..._20260725/    ← siap dipost Hermes
+│   ├── bahan_prompt/
+│   │   ├── image1.jpg        ← outfit ref
+│   │   ├── image2.jpg
+│   │   ├── layout.jpg        ← layout referensi
+│   │   ├── prompt.txt        ← prompt siap paste ke GPT
+│   │   └── _model_ref.jpg    ← (opsional)
+│   └── ready_pin/
+│       ├── slides/
+│       │   └── slide1.jpg    ← hasil GPT
+│       ├── image1.jpg        ← outfit ref fitted ke canvas
+│       ├── image2.jpg
+│       └── deskripsi.txt
+└── DONE/                                     ← arsip pin sudah dipost
+    └── READY_[2x3]Dress_..._20260724/        ← dipindah Hermes setelah post
+
+LOGIKA HERMES SCAN:
+  - Scan /HASflo/ → cari folder prefix READY_
+  - Exclude subfolder DONE/
+  - Ambil 1 folder per sesi (urutan: terlama/terkecil dulu)
+  - Post ke Postiz
+  - Pindah folder → /HASflo/DONE/
+  - Notifikasi Telegram "✅ Pin posted: [judul]"
+  - Kalau tidak ada folder READY_ → skip diam-diam
+
+FOLDER NAMING CONVENTION:
+  Sebelum Step 8 : [ratio_prefix][nama_produk]_[tanggal]
+                   contoh: [2x3]Dress_Wanita_Motif_Bunga_20260725
+  Setelah Step 8 : READY_[ratio_prefix][nama_produk]_[tanggal]
+                   contoh: READY_[2x3]Dress_Wanita_Motif_Bunga_20260725
+  Setelah dipost : dipindah ke /HASflo/DONE/ (nama folder tidak berubah)
+
+================================================================
+ATURAN KONTEN — TITLE & DESCRIPTION
+================================================================
+
+JUDUL Pinterest:
+  - Bebas kreatif, ikut keyword trending hasil riset Hermes
+  - Tidak perlu format kaku
+  - Max 100 karakter
+  - Tidak hard-selling
+
+DESKRIPSI Pinterest:
+  - Kalimat 1 WAJIB: judul Shopee VERBATIM seperti yang diketik user
+                     tidak boleh diubah, dibersihkan, atau dimodifikasi
+  - Kalimat 2-dst: keyword trending dari seo_keywords.json, natural
+  - Max 500 karakter
+  - Tidak hard-selling, tidak persuasif
+  - DILARANG: "dapatkan sekarang", "segera beli", "klik link", "harga spesial"
+
+================================================================
+SEO KEYWORDS SYSTEM
+================================================================
+
+FILE       : seo_keywords.json (root project)
+FORMAT     : JSON dengan struktur title + description per tipe produk
+UPDATE     : Otomatis tiap Senin 09:00 WIB oleh Hermes skill
+SOURCE     : Google Trends (pytrends, geo=ID) + Pinterest Trends
+ANALISA    : Gemini API
+PUSH       : Hermes git push ke GitHub → Streamlit Cloud auto-redeploy
+
+STRUKTUR JSON:
+{
+  "updated_at": "YYYY-MM-DD",
+  "week": N,
+  "source": ["google_trends", "pinterest_trends"],
+  "keywords": {
+    "dress": {
+      "title": [...],        ← untuk generate judul Pinterest
+      "description": [...]   ← untuk kalimat 2-dst deskripsi
+    },
+    "blouse":   { "title": [...], "description": [...] },
+    "tunik":    { "title": [...], "description": [...] },
+    "outer":    { "title": [...], "description": [...] },
+    "setelan":  { "title": [...], "description": [...] },
+    "unknown":  { "title": [...], "description": [...] }
+  }
+}
+
+FALLBACK: kalau JSON gagal dibaca → pakai SEO_KEYWORDS_DEFAULT
+          hardcoded di title_desc_generator.py (app tidak crash)
+
+REFACTOR YANG DIPERLUKAN:
+  - title_desc_generator.py : hapus SEO_KEYWORDS dict hardcoded
+                               load dari seo_keywords.json
+  - app.py                  : hapus SEO_KEYWORDS dict hardcoded
+                               import dari title_desc_generator
 
 ================================================================
 BOARD & SECTION ROUTING
@@ -90,9 +235,9 @@ Board MODERN : "Fashion Outfit Modern Motif Bunga"
   Sections   : Dress | Blouse | One Set | Outer
 
 Rules:
-- Tunik → selalu Board Hijab, tidak bisa override
-- Setelan/One Set → Section "One Set" di kedua board
-- Keyword CSV: "floral dress" kalau dress, "floral" untuk semua tipe lain
+  - Tunik → selalu Board Hijab, tidak bisa override
+  - Setelan/One Set → Section "One Set" di kedua board
+  - Keyword CSV: "floral dress" kalau dress, "floral" untuk semua tipe lain
 
 ================================================================
 TIPE PRODUK & DETEKSI
@@ -103,13 +248,6 @@ blouse  → keywords: blouse, atasan, kemeja
 tunik   → keywords: tunik
 outer   → keywords: outer, jaket, cardigan, sweater
 setelan → keywords: setelan, one set, co-ord
-
-Board mapping (processor.py BOARD_SECTIONS):
-  dress   → Floral Fashion Picks/Dress
-  blouse  → Floral Fashion Picks/Blouse
-  tunik   → Floral Fashion Picks/Tunik
-  outer   → Floral Fashion Picks/Outer
-  setelan → Floral Fashion Picks/Setelan
 
 ================================================================
 CANVAS OPTIONS (image_generator.py)
@@ -125,10 +263,10 @@ LAYOUT SYSTEM
 ================================================================
 
 - Layout di-load otomatis dari assets/*.json via load_layouts()
-- Setiap layout: JSON + preview JPG dengan nama file sama (layout4.json + layout4.jpg)
-- Field JSON: name, description, tags, order, n_photo_slots (rekomendasi slot default),
-              swipe_cta (opsional), preview_path (opsional, auto-derive dari stem)
-- Step 5 UI: selectbox slot 3-6-7, default dari n_photo_slots JSON
+- Setiap layout: JSON + preview JPG dengan nama file sama
+- Field JSON: name, description, tags, order, n_photo_slots,
+              swipe_cta (opsional), preview_path (opsional)
+- Step 5 UI: selectbox slot 3-7, default dari n_photo_slots JSON
 - Per-layout state: n_photo_slots_{layout_name} dan highlight_{layout_name}
 - Hero shot options: No Highlight | Full Shot | Medium Shot
 
@@ -140,125 +278,181 @@ Full Shot   → full body head-to-toe, organic irregular border frame
 Medium Shot → upper body waist-up, organic irregular border frame
 No Highlight → tidak ada hero shot terpisah
 
-Parameter: highlight: str di build_prompt_json()
-Injeksi sebagai section terpisah setelah Photo slots, BUKAN di klausa Style
-
 ================================================================
-SCRAPER (scraper.py) — UPDATE JUNI 2026
+SCRAPER (scraper.py) — ABANDONED
 ================================================================
 
-- Stealth patch via STEALTH_INIT_SCRIPT (add_init_script sebelum load halaman)
-  Patch: navigator.webdriver, plugins, languages, window.chrome,
-         permissions.query, WebGL renderer, hardwareConcurrency, deviceMemory
-- MODERN_USER_AGENT: Chrome 126
-- detect_login_wall(): deteksi redirect /verify/traffic atau is_logged_in=false
-  → return error "LOGIN_WALL_DETECTED" dan stop scraping
-- CATATAN: stealth patch TIDAK cukup kalau wall murni berbasis status sesi
-- Video scraping tidak feasible headless → input manual mp4 URL (DevTools)
-  thumbnail timestamp default "0:05"
-- URL cleaning: strip @resize_xxx via regex, filter _cover/_tn suffix
+- Stealth patch tidak cukup untuk bypass Shopee login wall
+- is_logged_in=false tidak bisa ditembus tanpa sesi login asli
+- Cookie injection ditolak karena risiko ban akun
+- KEPUTUSAN FINAL: scraping Shopee ditinggalkan selamanya
+- Input gambar sekarang: manual paste URL di Step 1 app.py
 
 ================================================================
-PROCESSOR.PY — CSV BULK UPLOAD
+AGENT SYSTEM — HERMES + POSTIZ
 ================================================================
 
-- Shuffle pins + schedule bersamaan (zip + random.shuffle) sebelum generate CSV
-- Title unik per batch (tidak boleh duplikat), max 20 attempt per pin
-  fallback: tambah suffix counter
-- AI generate via Gemini kalau AI_ENABLED=True
-- Fallback: templates.py (pool title/desc per tipe, rotasi by index)
-- CSV format: CRLF line endings (lineterminator="\r\n")
-- Kolom: Title | Media URL | Pinterest board | Thumbnail | Description |
-          Link | Publish date | Keywords
-- Publish date: UTC (WIB - 7 jam), buffer 2 jam sebelum publish
-- Pinterest tolak: duplikat affiliate link atau duplikat title dalam satu batch
-- JANGAN edit CSV di Excel sebelum upload (merusak CRLF)
-- Shopee CDN webp URL diterima langsung oleh Pinterest
+HERMES AGENT (Nous Research):
+  - Jalan lokal di PC (bukan VPS — hindari kartu kredit)
+  - Brain: Gemini API (cloud) — tidak butuh GPU/model lokal
+  - Memory: SOUL.md / MEMORY.md di ~/.hermes/
+  - Channel notifikasi: Telegram
+  - Cron: built-in scheduler
+  - Resource: ~300–600 MB RAM, tidak butuh GPU
+
+POSTIZ (self-host via Docker):
+  - Posting engine untuk Pinterest
+  - Connect Pinterest HAS_flo via OAuth biasa
+    (tidak butuh Pinterest API approval)
+  - Support carousel pin (multi-image) ✅
+  - Gratis (self-host, open-source AGPL-3.0)
+  - Resource: ~512MB–1GB RAM
+  - Mitigasi kalau Pinterest API tidak di-approve
+
+KENAPA TIDAK PAKAI VPS:
+  - Semua platform VPS gratis (Oracle, GCP) butuh kartu kredit
+  - PC lokal cukup karena posting dalam window 09:00–19:00 WIB
+  - Jika PC mati → sesi skip, acceptable
+
+HERMES SKILLS YANG AKAN DIBUAT:
+  1. hasflo_post_pin (4x sehari)
+     CRON: 09:30 / 12:30 / 15:30 / 18:00 WIB setiap hari
+     → scan /HASflo/ cari folder prefix READY_ (exclude DONE/)
+     → ambil 1 folder terlama
+     → baca ready_pin/deskripsi.txt
+     → post ke Postiz (carousel: slides/ + image*.jpg)
+     → pindah folder → /HASflo/DONE/
+     → notifikasi Telegram "✅ Pin posted: [judul]"
+     → kalau tidak ada READY_ folder → skip diam-diam
+
+  2. hasflo_keyword_update
+     CRON: Senin 09:00 WIB
+     → fetch Google Trends via pytrends (geo=ID, 7 hari)
+     → fetch Pinterest Trends endpoint
+     → Gemini analisa → generate keyword per tipe produk
+     → validasi JSON (semua tipe ada? format valid?)
+     → git pull → overwrite seo_keywords.json → git push
+     → Streamlit Cloud auto-redeploy
+     → notifikasi Telegram dengan top keyword minggu ini
+
+  3. hasflo_analytics (setelah Pinterest API approved)
+     CRON: Senin 09:00 WIB (setelah keyword update)
+     → fetch Pinterest Analytics API
+     → bandingkan dengan minggu lalu
+     → identifikasi pin performa terbaik
+     → kirim laporan ke Telegram
+
+HERMES CONTEXT (SOUL.md):
+  Akun         : HAS_flo Pinterest
+  Niche        : fashion wanita motif bunga
+  Target       : wanita Indonesia 18-34
+  Platform jual: Shopee affiliate
+  Board Hijab  : Fashion Outfit Hijab Motif Bunga
+  Board Modern : Fashion Outfit Modern Motif Bunga
+  Posting      : 4x sehari, 09:30/12:30/15:30/18:00 WIB
+  Libur        : tidak ada (setiap hari)
 
 ================================================================
-DROPBOX CLIENT (dropbox_client.py)
+ANALYTICS BASELINE PRE-ARCHIVE (Juli 2026)
 ================================================================
 
-Fungsi utama:
-- _get_access_token()         → tukar refresh token → access token (~4 jam)
-- upload_file()               → upload file lokal ke Dropbox
-- upload_bytes()              → upload bytes in-memory (untuk ZIP/konten langsung)
-- upload_folder()             → upload folder rekursif dengan progress callback
-- rename_folder()             → rename/move folder (dipakai agent untuk _DONE marker)
-- list_subfolders()           → list subfolder langsung di bawah path tertentu
-- upload_zip_folder_to_dropbox() → entry point dari app.py Step 7
+Monthly views      : 119k
+Audiens Indonesia  : 7% (target naik ke 15–25% dalam 3 bulan)
 
-Root Dropbox: /HASflo/
+Board performa:
+  heart-graphics  : 61k impressions / 22 outbound click
+  floral-graphics : 29k impressions / 7 outbound click
+  fashion-modern  : 4.675 impressions / 8 outbound click
+  fashion-hijab   : 3.790 impressions / 4 outbound click
 
-================================================================
-TITLE & DESC GENERATOR (title_desc_generator.py)
-================================================================
+KEPUTUSAN: archive board graphic, fokus audiens Indonesia
+           untuk konversi affiliate Shopee
 
-- render_title_desc_section() → dipanggil dari app.py setelah scraping
-- ai_generate_title_desc()    → Gemini API, return {title, desc} atau {error}
-- format_pinterest_title()    → fallback template: [Label] Motif [X] Floral, max 100 char
-- generate_description_template() → fallback: kalimat 1 = judul bersih, kalimat 2-4 = SEO
-- Cache di session_state key: "titledesc_{prod_url}"
-- SEO_KEYWORDS: campuran Indonesia-Inggris (berbeda dari app.py yang all-Indonesian)
+PROYEKSI (dengan posting konsisten + keyword optimization):
+  3 bulan → audiens Indonesia 15–25%
+  6 bulan → monthly views 2–3x baseline
 
 ================================================================
-RENCANA pinterest_agent.py (LOCAL, BELUM DIBUAT)
+ROADMAP TO-DO LIST
 ================================================================
 
-Pinterest API tier: Trial — limit 1000 pin/day
+✅ SELESAI:
+  - Streamlit app Step 1–8
+  - Dropbox pipeline (bahan_prompt + ready_pin)
+  - Layout JSON system (layout4, 5, 13, 14)
+  - image_generator.py, title_desc_generator.py
+  - Analytics baseline PRE-ARCHIVE tersimpan
+  - Arsitektur Hermes + Postiz dirancang
+  - Jadwal cron 4 sesi/hari dikonfirmasi
+  - Jam PC aktif dikonfirmasi (09:00–19:00 semua hari)
+  - Aturan konten title & description dikonfirmasi
+  - Arsitektur seo_keywords.json dirancang
+  - Dropbox folder naming convention dikonfirmasi
+  - Logika DONE/ folder dikonfirmasi
 
-ALUR AGENT:
-1. Poll Dropbox /HASflo/ via list_subfolders()
-2. Filter: folder dengan ready_pin/ tapi BELUM ready_pin_DONE/
-3. Download deskripsi.txt → parse:
-     Baris 1: Board/Section (contoh: "Fashion Outfit Hijab Motif Bunga/Dress")
-     Baris 2: Judul pin
-     Baris 3: Deskripsi pin
-     Baris 4: Link affiliate Shopee
-4. Resolve Board ID: GET /v5/boards → cache nama→ID mapping
-5. Deteksi tipe pin:
-     Ada subfolder slides/ → CAROUSEL
-     Tidak ada → SINGLE IMAGE
-6. Download semua file media dari Dropbox
-7. POST /v5/pins:
-     Carousel: media_source.source_type = "multiple_image_urls" atau upload dulu
-     Single  : media_source.source_type = "image_url"
-8. Setelah sukses: rename_folder(ready_pin → ready_pin_DONE)
-9. Log hasil ke file log lokal
+⏳ FASE 1 — Infrastructure:
+  □ Install Docker Desktop di PC
+  □ Self-host Postiz via Docker
+  □ Connect Pinterest HAS_flo ke Postiz (OAuth)
+  □ Install Hermes Agent
+  □ Setup Telegram Bot untuk notifikasi
+  □ Tulis SOUL.md Hermes (context HASflo)
 
-SCHEDULER: Windows Task Scheduler, sekali sehari
-AUTH: OAuth2 access token disimpan di config.py (PINTEREST_ACCESS_TOKEN)
+⏳ FASE 2 — Agent Posting:
+  □ Buat Hermes skill: hasflo_post_pin
+  □ Set cron 4 sesi: 09:30 / 12:30 / 15:30 / 18:00 WIB
+  □ Test end-to-end: Streamlit → Dropbox → Hermes → Postiz → Pinterest
+  □ Verifikasi folder READY_ → DONE/ setelah post
 
-CATATAN API v5 TRIAL:
-- Limit: 1000 pin/day
-- scheduled_time: bisa di-set saat POST → agent submit batch, lalu mati
-  (tidak perlu always-on/VPS)
-- Board ID harus di-resolve dari nama string (tidak bisa pakai nama langsung)
-- Perlu konfirmasi format persis media_source untuk carousel di tier trial
+⏳ FASE 3 — Keyword Optimization:
+  □ Buat seo_keywords.json (seed manual dari keyword existing)
+  □ Refactor title_desc_generator.py → load dari JSON + fallback
+  □ Refactor app.py → hapus SEO_KEYWORDS hardcoded
+  □ Update prompt Gemini Step 2: kalimat 1 = verbatim judul Shopee
+  □ Test di Streamlit Cloud
+  □ Setup GitHub Personal Access Token untuk Hermes
+  □ Buat Hermes skill: hasflo_keyword_update
+  □ Set cron Senin 09:00 WIB
+  □ Test end-to-end keyword update → GitHub push → Streamlit redeploy
+
+⏳ FASE 4 — Monitoring & Analytics:
+  □ Buat Hermes skill: hasflo_analytics (setelah Pinterest API approved)
+  □ Pin recycling: identifikasi pin lama → optimasi ulang → jadwalkan
+  □ A/B testing layout: monitor saves & klik per layout type
 
 ================================================================
 KEPUTUSAN ARSITEKTUR YANG SUDAH DIAMBIL
 ================================================================
 
-1. Carousel TIDAK BISA via CSV bulk upload → wajib API v5
-2. CSV bulk upload tetap untuk single-image pin volume tinggi
-3. Agent: mulai local dulu, VPS kalau volume naik atau jadwal sering meleset
-4. Amazon Associates dicoret — geographic mismatch, butuh rekening US/India
-5. Silhouette cutout tidak feasible via prompt teks → pakai organic irregular border
-6. Bulk upload scheduling tidak trigger spam filter selama konten tidak identik
-7. GPT image gen: prioritaskan visual reference atas instruksi teks untuk komposisi
-8. Fitur dengan reliabilitas rendah → cancel/revert, bukan workaround
+1.  Carousel TIDAK BISA via CSV bulk upload → wajib Postiz
+2.  CSV bulk upload DITINGGALKAN, sudah bukan intent user
+3.  Shopee scraping DITINGGALKAN selamanya — login wall tidak bisa ditembus
+4.  Agent: Hermes + Postiz lokal, bukan pinterest_agent.py manual
+5.  VPS dicoret — semua platform gratis butuh kartu kredit
+6.  PC lokal cukup — posting dalam window aktif 09:00–19:00 WIB
+7.  Posting 4 sesi/hari setiap hari termasuk Minggu
+8.  PC mati saat sesi → skip, tidak ada retry, acceptable
+9.  Queue kosong saat sesi → skip diam-diam, tidak ada notifikasi
+10. Folder setelah dipost → dipindah ke /HASflo/DONE/ (bukan rename suffix)
+11. seo_keywords.json = single source of truth, dipisah dari kode Python
+12. Keyword untuk judul & deskripsi dipisah di JSON (title vs description)
+13. Kalimat 1 deskripsi = judul Shopee VERBATIM, tidak boleh dimodifikasi
+14. Judul Pinterest = bebas kreatif ikut trending, tidak perlu format kaku max 100 characters
+15. Model lokal Ollama tidak diperlukan — Gemini API sudah cukup
+16. Hermes skill generik/marketplace tidak diperlukan — custom 3 skill saja
+17. Amazon Associates dicoret — geographic mismatch
+18. Pinterest API approval = mitigasi via Postiz OAuth (tidak wajib untuk posting)
 
 ================================================================
 PREFERENSI DEVELOPMENT
 ================================================================
 
+- Rancang dulu sebelum eksekusi — konfirmasi arsitektur sebelum coding
 - Direct implementation, minimal penjelasan panjang
 - Pre-assess limitation sebelum implementasi
 - Revert/cancel > workaround kalau ada reliability issue
 - Session state Streamlit: hindari set key setelah widget instantiated
-  (solusi: hapus parameter key, control via index)
-- run.bat: PowerShell + delay Chrome open + --server.headless true
-  (cegah Streamlit buka Edge secara bersamaan)
+- Hasflo menghindari kartu kredit untuk layanan cloud apapun
+- Jangan inisiatif buat path/struktur baru tanpa konfirmasi
 
 ================================================================
