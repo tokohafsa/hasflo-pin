@@ -250,7 +250,7 @@ def render_title_desc_section():
     from processor import detect_product_type
 
     try:
-        from config import AI_ENABLED, AI_API_KEY, AI_MODEL
+        from _credentials import AI_ENABLED, AI_API_KEY, AI_MODEL
         has_ai = AI_ENABLED and bool(AI_API_KEY)
     except ImportError:
         has_ai = False
