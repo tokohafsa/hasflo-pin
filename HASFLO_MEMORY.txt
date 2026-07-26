@@ -9,7 +9,6 @@ PINTEREST ACC : pinterest.com/has_flo  (nama akun: Hasna)
 SHOPEE AFF    : affiliate.shopee.co.id
 BIO PINTEREST : "Kurasi pilihan bertema bunga & hati terbaik untuk kamu | Bloom, Grow, Hasflo"
 AUDIENCE      : Female 56.4%, usia 18-34, Android dominan, Indonesia (target konversi Shopee)
-GITHUB REPO   : https://github.com/tokohafsa/hasflo-pin
 
 ================================================================
 STACK TEKNOLOGI
@@ -19,7 +18,7 @@ STACK TEKNOLOGI
 - Playwright async (scraper.py) — ABANDONED
 - Gemini API via google-genai SDK (title/desc generation + keyword analisa)
 - Dropbox API via requests langsung (OAuth2 refresh token)
-- Postiz self-host via Docker — posting engine Pinterest
+- Postiz — Docker Engine di WSL2 Ubuntu (tanpa Docker Desktop)
 - Hermes Agent (Nous Research) — koordinator otomasi + cron scheduler
 - Pinterest API v5 (rencana: analytics monitoring — menunggu approval)
 - Miniconda env_main, Windows lokal
@@ -29,41 +28,77 @@ STACK TEKNOLOGI
 JAM PC AKTIF
 ================================================================
 
-Senin–Sabtu : 09:00–19:00 WIB
-Minggu      : 09:00–19:00 WIB (disamakan, tidak dikecualikan)
+Senin–Minggu : 09:00–19:00 WIB (semua hari sama, tidak dikecualikan)
 
-CATATAN: PC ini adalah PC kerja — Streamlit app dipakai
-manual saat jam aktif. Hermes + Postiz jalan lokal di PC
-yang sama. Tidak pakai VPS (menghindari kartu kredit).
-Jika PC mati saat jadwal cron → sesi tersebut skip, tidak ada retry.
+CATATAN: PC ini adalah PC kerja. Hermes + Postiz TIDAK berjalan
+sepanjang hari — hanya aktif saat sesi posting (lihat jadwal).
+Jika PC mati saat sesi berjalan → pin yang belum dipost
+tetap di Dropbox → diambil di sesi berikutnya.
+Jika PC mati sebelum sesi → sesi skip, sesi berikutnya
+berjalan normal saat PC nyala kembali.
 
 ================================================================
-JADWAL HERMES CRON
+JADWAL POSTING — 3 SESI, 2 PIN PER SESI
 ================================================================
 
-POSTING PIN — 4 sesi per hari, setiap hari (termasuk Minggu):
-  Sesi 1 : 09:30 WIB
-  Sesi 2 : 12:30 WIB
-  Sesi 3 : 15:30 WIB
-  Sesi 4 : 18:00 WIB
+SESI 1 — PAGI:
+  09:15 WIB → WSL2 START + Postiz prepare (15 menit buffer)
+  09:30 WIB → Pin 1 dipost
+  09:35 WIB → Pin 2 dipost
+  09:45 WIB → WSL2 STOP
 
-KEYWORD UPDATE  : Senin 09:00 WIB (30 menit sebelum sesi 1)
-ANALYTICS REPORT: Senin 09:00 WIB (setelah keyword update selesai)
+SESI 2 — SIANG:
+  12:15 WIB → WSL2 START + Postiz prepare
+  12:30 WIB → Pin 1 dipost
+  12:35 WIB → Pin 2 dipost
+  12:45 WIB → WSL2 STOP
+
+SESI 3 — SORE:
+  17:45 WIB → WSL2 START + Postiz prepare
+  18:00 WIB → Pin 1 dipost
+  18:05 WIB → Pin 2 dipost
+  18:15 WIB → WSL2 STOP
 
 TARGET POSTING:
-  Per hari    : 4 pin (kalau semua sesi PC aktif)
-  Per minggu  : 28 pin (maksimum)
-  Realistis   : ~20–24 pin/minggu (estimasi PC kadang mati)
-  Per bulan   : ~80–112 pin
+  Per sesi    : 2 pin
+  Per hari    : 6 pin
+  Per minggu  : 42 pin
+  Per bulan   : ~168 pin
+
+RAM TERPAKAI  : ~30 menit/hari (3 sesi × ~10 menit aktif)
+TASK SCHEDULER: 6 task total (3 START + 3 STOP)
+
+KEYWORD UPDATE : Senin 09:00 WIB (sebelum Sesi 1)
+ANALYTICS      : Senin 09:00 WIB (setelah keyword update)
+
+PERILAKU JIKA PC MATI SAAT SESI:
+  → Pin yang sudah dipost: selesai
+  → Pin yang belum dipost: folder READY_ tetap di Dropbox
+  → Sesi berikutnya: scan Dropbox dari awal, ambil semua READY_
+  → Tidak ada pin yang hilang permanen, hanya tertunda
 
 PERILAKU JIKA QUEUE KOSONG:
   → Hermes skip diam-diam, tidak ada notifikasi
 
-DICORET:
-  - Slot 07:30 WIB (PC belum aktif)
-  - Slot 20:00 WIB (PC sudah mati jam 19:00)
-  - Libur Minggu (disamakan dengan hari lain)
-  - Slot tambahan 13:30 WIB (digantikan sistem 4 sesi tetap)
+================================================================
+HERMES POSTIZ STARTUP FLOW
+================================================================
+
+Script START (PowerShell → Task Scheduler):
+  1. wsl -d Ubuntu start
+  2. docker compose up -d (di /opt/postiz)
+  3. Health check loop: ping localhost:5000/health setiap 5 detik
+  4. Kalau Postiz ready → Hermes trigger hasflo_post_pin
+  5. Post pin ke-1, jeda 5 menit, post pin ke-2
+
+Script STOP (PowerShell → Task Scheduler):
+  1. docker compose down (di /opt/postiz)
+  2. wsl --shutdown
+
+Health check (lebih reliable dari sleep tetap):
+  until curl -s http://localhost:5000/health | grep -q "ok"; do
+    sleep 5
+  done
 
 ================================================================
 FILE STRUKTUR
@@ -109,26 +144,24 @@ JALUR A — CAROUSEL PIN (via Hermes + Postiz):
   5. app.py Step 5: pilih layout collage (JSON dari assets/)
   6. app.py Step 6: generate prompt collage (build_prompt_json)
   7. app.py Step 7: upload bahan_prompt/ ke Dropbox
-       → outfit images (imageN.jpg) + layout.jpg + prompt.txt
        → folder name: [ratio_prefix][nama_produk]_[tanggal]
          contoh: [2x3]Dress_Wanita_Motif_Bunga_20260725
   8. User: buka Dropbox → upload semua file ke GPT → dapat hasil collage
-  9. app.py Step 8: drag hasil GPT → fit ke canvas + dominant color fill
-       → upload ready_pin/ ke Dropbox
-       → app rename folder parent: [nama] → READY_[nama]
+  9. app.py Step 8: drag hasil GPT → upload ready_pin/ ke Dropbox
+       → app rename folder: [nama] → READY_[nama]
        Struktur ready_pin/:
          slides/slide1.jpg   ← hasil GPT
-         image1.jpg          ← outfit ref 1 (fitted ke canvas ratio)
+         image1.jpg          ← outfit ref 1
          image2.jpg          ← outfit ref 2 (dst)
          deskripsi.txt       ← Board/Section
                                 Judul pin
                                 Deskripsi pin
                                 Link affiliate Shopee
- 10. Hermes: poll Dropbox → post ke Postiz → pindah ke DONE/
+ 10. Hermes: poll Dropbox → post 2 pin per sesi → pindah ke DONE/
 
 JALUR B — SINGLE IMAGE PIN (via CSV bulk upload):
   1-2. Sama seperti Jalur A
-  3. processor.py → generate CSV (shuffle, jadwal WIB→UTC, AI title/desc)
+  3. processor.py → generate CSV
   4. Upload CSV ke Pinterest bulk upload tool
 
 ================================================================
@@ -138,35 +171,26 @@ DROPBOX STRUCTURE
 /HASflo/
 ├── READY_[2x3]Dress_Wanita_..._20260725/    ← siap dipost Hermes
 │   ├── bahan_prompt/
-│   │   ├── image1.jpg        ← outfit ref
-│   │   ├── image2.jpg
-│   │   ├── layout.jpg        ← layout referensi
-│   │   ├── prompt.txt        ← prompt siap paste ke GPT
-│   │   └── _model_ref.jpg    ← (opsional)
 │   └── ready_pin/
-│       ├── slides/
-│       │   └── slide1.jpg    ← hasil GPT
-│       ├── image1.jpg        ← outfit ref fitted ke canvas
-│       ├── image2.jpg
+│       ├── slides/slide1.jpg
+│       ├── image1.jpg
 │       └── deskripsi.txt
 └── DONE/                                     ← arsip pin sudah dipost
-    └── READY_[2x3]Dress_..._20260724/        ← dipindah Hermes setelah post
-
-LOGIKA HERMES SCAN:
-  - Scan /HASflo/ → cari folder prefix READY_
-  - Exclude subfolder DONE/
-  - Ambil 1 folder per sesi (urutan: terlama/terkecil dulu)
-  - Post ke Postiz
-  - Pindah folder → /HASflo/DONE/
-  - Notifikasi Telegram "✅ Pin posted: [judul]"
-  - Kalau tidak ada folder READY_ → skip diam-diam
+    └── READY_[2x3]Dress_..._20260724/
 
 FOLDER NAMING CONVENTION:
   Sebelum Step 8 : [ratio_prefix][nama_produk]_[tanggal]
-                   contoh: [2x3]Dress_Wanita_Motif_Bunga_20260725
   Setelah Step 8 : READY_[ratio_prefix][nama_produk]_[tanggal]
-                   contoh: READY_[2x3]Dress_Wanita_Motif_Bunga_20260725
-  Setelah dipost : dipindah ke /HASflo/DONE/ (nama folder tidak berubah)
+  Setelah dipost : dipindah ke /HASflo/DONE/
+
+LOGIKA HERMES SCAN PER SESI:
+  1. Scan /HASflo/ → cari semua folder prefix READY_ (exclude DONE/)
+  2. Urutkan: terlama dulu
+  3. Ambil 2 folder teratas
+  4. Post pin ke-1 → pindah ke DONE/ → jeda 5 menit
+  5. Post pin ke-2 → pindah ke DONE/
+  6. Notifikasi Telegram "✅ Sesi [X]: 2 pin posted"
+  7. Kalau READY_ < 2 → post sebanyak yang ada, skip sisanya
 
 ================================================================
 ATURAN KONTEN — TITLE & DESCRIPTION
@@ -203,26 +227,17 @@ STRUKTUR JSON:
   "week": N,
   "source": ["google_trends", "pinterest_trends"],
   "keywords": {
-    "dress": {
-      "title": [...],        ← untuk generate judul Pinterest
-      "description": [...]   ← untuk kalimat 2-dst deskripsi
-    },
-    "blouse":   { "title": [...], "description": [...] },
-    "tunik":    { "title": [...], "description": [...] },
-    "outer":    { "title": [...], "description": [...] },
-    "setelan":  { "title": [...], "description": [...] },
-    "unknown":  { "title": [...], "description": [...] }
+    "dress":   { "title": [...], "description": [...] },
+    "blouse":  { "title": [...], "description": [...] },
+    "tunik":   { "title": [...], "description": [...] },
+    "outer":   { "title": [...], "description": [...] },
+    "setelan": { "title": [...], "description": [...] },
+    "unknown": { "title": [...], "description": [...] }
   }
 }
 
 FALLBACK: kalau JSON gagal dibaca → pakai SEO_KEYWORDS_DEFAULT
           hardcoded di title_desc_generator.py (app tidak crash)
-
-REFACTOR YANG DIPERLUKAN:
-  - title_desc_generator.py : hapus SEO_KEYWORDS dict hardcoded
-                               load dari seo_keywords.json
-  - app.py                  : hapus SEO_KEYWORDS dict hardcoded
-                               import dari title_desc_generator
 
 ================================================================
 BOARD & SECTION ROUTING
@@ -237,7 +252,6 @@ Board MODERN : "Fashion Outfit Modern Motif Bunga"
 Rules:
   - Tunik → selalu Board Hijab, tidak bisa override
   - Setelan/One Set → Section "One Set" di kedua board
-  - Keyword CSV: "floral dress" kalau dress, "floral" untuk semua tipe lain
 
 ================================================================
 TIPE PRODUK & DETEKSI
@@ -250,7 +264,7 @@ outer   → keywords: outer, jaket, cardigan, sweater
 setelan → keywords: setelan, one set, co-ord
 
 ================================================================
-CANVAS OPTIONS (image_generator.py)
+CANVAS OPTIONS
 ================================================================
 
 "1000x1500" → 1000×1500 px, ratio 2:3 (Pinterest vertikal, default)
@@ -266,98 +280,96 @@ LAYOUT SYSTEM
 - Setiap layout: JSON + preview JPG dengan nama file sama
 - Field JSON: name, description, tags, order, n_photo_slots,
               swipe_cta (opsional), preview_path (opsional)
-- Step 5 UI: selectbox slot 3-7, default dari n_photo_slots JSON
-- Per-layout state: n_photo_slots_{layout_name} dan highlight_{layout_name}
 - Hero shot options: No Highlight | Full Shot | Medium Shot
 
 ================================================================
-HIGHLIGHT / HERO SHOT
-================================================================
-
-Full Shot   → full body head-to-toe, organic irregular border frame
-Medium Shot → upper body waist-up, organic irregular border frame
-No Highlight → tidak ada hero shot terpisah
-
-================================================================
-SCRAPER (scraper.py) — ABANDONED
+SCRAPER — ABANDONED
 ================================================================
 
 - Stealth patch tidak cukup untuk bypass Shopee login wall
-- is_logged_in=false tidak bisa ditembus tanpa sesi login asli
-- Cookie injection ditolak karena risiko ban akun
 - KEPUTUSAN FINAL: scraping Shopee ditinggalkan selamanya
-- Input gambar sekarang: manual paste URL di Step 1 app.py
+- Input gambar: manual paste URL di Step 1 app.py
 
 ================================================================
 AGENT SYSTEM — HERMES + POSTIZ
 ================================================================
 
-HERMES AGENT (Nous Research):
-  - Jalan lokal di PC (bukan VPS — hindari kartu kredit)
-  - Brain: Gemini API (cloud) — tidak butuh GPU/model lokal
-  - Memory: SOUL.md / MEMORY.md di ~/.hermes/
-  - Channel notifikasi: Telegram
-  - Cron: built-in scheduler
-  - Resource: ~300–600 MB RAM, tidak butuh GPU
+POSTIZ:
+  - Install: Docker Engine di WSL2 Ubuntu (tanpa Docker Desktop GUI)
+  - Lokasi: /opt/postiz di dalam WSL2 Ubuntu
+  - Akses: localhost:5000 dari browser Windows
+  - Connect Pinterest: OAuth biasa (tidak butuh API approval)
+  - Support carousel pin ✅
+  - Gratis (open-source AGPL-3.0)
+  - RAM: ~1–1.5GB saat aktif, 0 saat mati
 
-POSTIZ (self-host via Docker):
-  - Posting engine untuk Pinterest
-  - Connect Pinterest HAS_flo via OAuth biasa
-    (tidak butuh Pinterest API approval)
-  - Support carousel pin (multi-image) ✅
-  - Gratis (self-host, open-source AGPL-3.0)
-  - Resource: ~512MB–1GB RAM
-  - Mitigasi kalau Pinterest API tidak di-approve
+HERMES AGENT:
+  - Install: di dalam WSL2 Ubuntu (sama dengan Postiz)
+  - Brain: Gemini API — tidak butuh GPU/model lokal
+  - RAM: ~300MB saat aktif
+  - Notifikasi: Telegram Bot
 
 KENAPA TIDAK PAKAI VPS:
-  - Semua platform VPS gratis (Oracle, GCP) butuh kartu kredit
-  - PC lokal cukup karena posting dalam window 09:00–19:00 WIB
-  - Jika PC mati → sesi skip, acceptable
+  - Semua platform VPS gratis butuh kartu kredit
+  - PC lokal cukup — Postiz hanya aktif ~30 menit/hari
+  - WSL2 start/stop otomatis via Task Scheduler
 
 HERMES SKILLS YANG AKAN DIBUAT:
-  1. hasflo_post_pin (4x sehari)
-     CRON: 09:30 / 12:30 / 15:30 / 18:00 WIB setiap hari
+  1. hasflo_post_pin
+     TRIGGER: dipanggil oleh script PowerShell Task Scheduler
+              setelah health check Postiz OK
      → scan /HASflo/ cari folder prefix READY_ (exclude DONE/)
-     → ambil 1 folder terlama
-     → baca ready_pin/deskripsi.txt
-     → post ke Postiz (carousel: slides/ + image*.jpg)
-     → pindah folder → /HASflo/DONE/
-     → notifikasi Telegram "✅ Pin posted: [judul]"
-     → kalau tidak ada READY_ folder → skip diam-diam
+     → urutkan terlama dulu, ambil 2 folder
+     → post pin ke-1 → pindah ke DONE/ → jeda 5 menit
+     → post pin ke-2 → pindah ke DONE/
+     → notifikasi Telegram "✅ Sesi [X]: 2 pin posted"
+     → kalau READY_ kosong → skip diam-diam
 
   2. hasflo_keyword_update
      CRON: Senin 09:00 WIB
-     → fetch Google Trends via pytrends (geo=ID, 7 hari)
-     → fetch Pinterest Trends endpoint
-     → Gemini analisa → generate keyword per tipe produk
-     → validasi JSON (semua tipe ada? format valid?)
-     → git pull → overwrite seo_keywords.json → git push
-     → Streamlit Cloud auto-redeploy
-     → notifikasi Telegram dengan top keyword minggu ini
+     → pytrends + Pinterest Trends → Gemini analisa
+     → validasi JSON → git push → Streamlit redeploy
+     → notifikasi Telegram
 
   3. hasflo_analytics (setelah Pinterest API approved)
      CRON: Senin 09:00 WIB (setelah keyword update)
-     → fetch Pinterest Analytics API
-     → bandingkan dengan minggu lalu
-     → identifikasi pin performa terbaik
-     → kirim laporan ke Telegram
+     → fetch Pinterest Analytics → laporan ke Telegram
 
-HERMES CONTEXT (SOUL.md):
+HERMES SOUL.md CONTEXT:
   Akun         : HAS_flo Pinterest
   Niche        : fashion wanita motif bunga
   Target       : wanita Indonesia 18-34
   Platform jual: Shopee affiliate
   Board Hijab  : Fashion Outfit Hijab Motif Bunga
   Board Modern : Fashion Outfit Modern Motif Bunga
-  Posting      : 4x sehari, 09:30/12:30/15:30/18:00 WIB
-  Libur        : tidak ada (setiap hari)
+  Posting      : 3 sesi/hari, 2 pin/sesi
+  Sesi         : 09:30 / 12:30 / 18:00 WIB
+
+================================================================
+WINDOWS TASK SCHEDULER — 6 TASKS
+================================================================
+
+TASK START SESI 1 : trigger 09:15 WIB
+TASK STOP  SESI 1 : trigger 09:45 WIB
+
+TASK START SESI 2 : trigger 12:15 WIB
+TASK STOP  SESI 2 : trigger 12:45 WIB
+
+TASK START SESI 3 : trigger 17:45 WIB
+TASK STOP  SESI 3 : trigger 18:15 WIB
+
+Script START:
+  wsl -d Ubuntu → docker compose up -d → health check → hermes run hasflo_post_pin
+
+Script STOP:
+  wsl -d Ubuntu → docker compose down → wsl --shutdown
 
 ================================================================
 ANALYTICS BASELINE PRE-ARCHIVE (Juli 2026)
 ================================================================
 
 Monthly views      : 119k
-Audiens Indonesia  : 7% (target naik ke 15–25% dalam 3 bulan)
+Audiens Indonesia  : 7% (target 15–25% dalam 3 bulan)
 
 Board performa:
   heart-graphics  : 61k impressions / 22 outbound click
@@ -366,11 +378,6 @@ Board performa:
   fashion-hijab   : 3.790 impressions / 4 outbound click
 
 KEPUTUSAN: archive board graphic, fokus audiens Indonesia
-           untuk konversi affiliate Shopee
-
-PROYEKSI (dengan posting konsisten + keyword optimization):
-  3 bulan → audiens Indonesia 15–25%
-  6 bulan → monthly views 2–3x baseline
 
 ================================================================
 ROADMAP TO-DO LIST
@@ -379,80 +386,190 @@ ROADMAP TO-DO LIST
 ✅ SELESAI:
   - Streamlit app Step 1–8
   - Dropbox pipeline (bahan_prompt + ready_pin)
-  - Layout JSON system (layout4, 5, 13, 14)
+  - Layout JSON system
   - image_generator.py, title_desc_generator.py
   - Analytics baseline PRE-ARCHIVE tersimpan
-  - Arsitektur Hermes + Postiz dirancang
-  - Jadwal cron 4 sesi/hari dikonfirmasi
-  - Jam PC aktif dikonfirmasi (09:00–19:00 semua hari)
-  - Aturan konten title & description dikonfirmasi
-  - Arsitektur seo_keywords.json dirancang
-  - Dropbox folder naming convention dikonfirmasi
-  - Logika DONE/ folder dikonfirmasi
+  - Seluruh arsitektur dirancang dan dikonfirmasi
+  - Jadwal 3 sesi × 2 pin dikonfirmasi
+  - Memory diupdate
 
-⏳ FASE 1 — Infrastructure:
-  □ Install Docker Desktop di PC
-  □ Self-host Postiz via Docker
+⏳ FASE 1 — Infrastructure (SEDANG BERJALAN):
+  □ Install WSL2 + Ubuntu di Windows
+  □ Install Docker Engine di WSL2
+  □ Install Postiz via Docker Compose di WSL2
   □ Connect Pinterest HAS_flo ke Postiz (OAuth)
-  □ Install Hermes Agent
-  □ Setup Telegram Bot untuk notifikasi
-  □ Tulis SOUL.md Hermes (context HASflo)
+  □ Install Hermes di WSL2
+  □ Setup Telegram Bot
+  □ Tulis SOUL.md Hermes
+  □ Setup Windows Task Scheduler (6 tasks)
+  □ Test health check script
+  □ Test end-to-end satu sesi
 
 ⏳ FASE 2 — Agent Posting:
   □ Buat Hermes skill: hasflo_post_pin
-  □ Set cron 4 sesi: 09:30 / 12:30 / 15:30 / 18:00 WIB
-  □ Test end-to-end: Streamlit → Dropbox → Hermes → Postiz → Pinterest
+  □ Test posting carousel ke Pinterest
   □ Verifikasi folder READY_ → DONE/ setelah post
 
 ⏳ FASE 3 — Keyword Optimization:
-  □ Buat seo_keywords.json (seed manual dari keyword existing)
-  □ Refactor title_desc_generator.py → load dari JSON + fallback
+  □ Buat seo_keywords.json (seed manual)
+  □ Refactor title_desc_generator.py → load dari JSON
   □ Refactor app.py → hapus SEO_KEYWORDS hardcoded
-  □ Update prompt Gemini Step 2: kalimat 1 = verbatim judul Shopee
-  □ Test di Streamlit Cloud
-  □ Setup GitHub Personal Access Token untuk Hermes
+  □ Update prompt Gemini Step 2
+  □ Setup GitHub PAT untuk Hermes
   □ Buat Hermes skill: hasflo_keyword_update
-  □ Set cron Senin 09:00 WIB
-  □ Test end-to-end keyword update → GitHub push → Streamlit redeploy
 
 ⏳ FASE 4 — Monitoring & Analytics:
-  □ Buat Hermes skill: hasflo_analytics (setelah Pinterest API approved)
-  □ Pin recycling: identifikasi pin lama → optimasi ulang → jadwalkan
-  □ A/B testing layout: monitor saves & klik per layout type
+  □ Hermes skill: hasflo_analytics (setelah Pinterest API approved)
+  □ Pin recycling
+  □ A/B testing layout
 
 ================================================================
-KEPUTUSAN ARSITEKTUR YANG SUDAH DIAMBIL
+KEPUTUSAN ARSITEKTUR
 ================================================================
 
-1.  Carousel TIDAK BISA via CSV bulk upload → wajib Postiz
-2.  CSV bulk upload DITINGGALKAN, sudah bukan intent user
-3.  Shopee scraping DITINGGALKAN selamanya — login wall tidak bisa ditembus
-4.  Agent: Hermes + Postiz lokal, bukan pinterest_agent.py manual
-5.  VPS dicoret — semua platform gratis butuh kartu kredit
-6.  PC lokal cukup — posting dalam window aktif 09:00–19:00 WIB
-7.  Posting 4 sesi/hari setiap hari termasuk Minggu
-8.  PC mati saat sesi → skip, tidak ada retry, acceptable
-9.  Queue kosong saat sesi → skip diam-diam, tidak ada notifikasi
-10. Folder setelah dipost → dipindah ke /HASflo/DONE/ (bukan rename suffix)
-11. seo_keywords.json = single source of truth, dipisah dari kode Python
-12. Keyword untuk judul & deskripsi dipisah di JSON (title vs description)
-13. Kalimat 1 deskripsi = judul Shopee VERBATIM, tidak boleh dimodifikasi
-14. Judul Pinterest = bebas kreatif ikut trending, tidak perlu format kaku max 100 characters
-15. Model lokal Ollama tidak diperlukan — Gemini API sudah cukup
-16. Hermes skill generik/marketplace tidak diperlukan — custom 3 skill saja
-17. Amazon Associates dicoret — geographic mismatch
-18. Pinterest API approval = mitigasi via Postiz OAuth (tidak wajib untuk posting)
+1.  Carousel → wajib Postiz (tidak bisa CSV bulk upload)
+2.  CSV bulk upload → tetap untuk single-image pin
+3.  Shopee scraping → DITINGGALKAN selamanya
+4.  Agent → Hermes + Postiz (bukan pinterest_agent.py manual)
+5.  VPS → dicoret (butuh kartu kredit)
+6.  Docker Desktop → dicoret (pakai Docker Engine di WSL2)
+7.  Postiz aktif → hanya ~30 menit/hari (3 sesi × 10 menit)
+8.  WSL2 start/stop → otomatis via Task Scheduler
+9.  PC mati saat sesi → pin tertunda ke sesi berikutnya
+10. PC mati sebelum sesi → sesi skip, berikutnya normal
+11. Queue kosong → skip diam-diam
+12. Folder setelah dipost → pindah ke /HASflo/DONE/
+13. 2 pin per sesi, jeda 5 menit antar pin
+14. seo_keywords.json → single source of truth keyword
+15. Kalimat 1 deskripsi → judul Shopee VERBATIM
+16. Judul Pinterest → bebas kreatif ikut trending
+17. Model lokal → tidak diperlukan (Gemini API)
+18. Hermes skill generik → tidak diperlukan (3 custom skill)
+19. Hasflo menghindari kartu kredit untuk layanan apapun
+20. Rancang dulu sebelum eksekusi
 
 ================================================================
 PREFERENSI DEVELOPMENT
 ================================================================
 
-- Rancang dulu sebelum eksekusi — konfirmasi arsitektur sebelum coding
+- Rancang dulu sebelum eksekusi
+- Konfirmasi arsitektur sebelum coding
 - Direct implementation, minimal penjelasan panjang
-- Pre-assess limitation sebelum implementasi
 - Revert/cancel > workaround kalau ada reliability issue
-- Session state Streamlit: hindari set key setelah widget instantiated
-- Hasflo menghindari kartu kredit untuk layanan cloud apapun
 - Jangan inisiatif buat path/struktur baru tanpa konfirmasi
+- Hasflo suka kelipatan 3 untuk pembagian jadwal/sesi
+
+================================================================
+
+================================================================
+PROGRESS INSTALASI — TERAKHIR DIUPDATE JULI 2026
+================================================================
+
+STATUS FASE 1 — Infrastructure:
+
+✅ WSL2 + Ubuntu terinstall
+   Username : toko@HAFSA-ATEKA
+   Distro   : Ubuntu (default)
+
+✅ WSL2 resource limit dikonfigurasi
+   File     : C:\Users\[nama]\.wslconfig
+   Setting  : memory=3GB, processors=2, swap=0
+
+✅ Docker Engine terinstall di WSL2
+   Test     : hello-world berhasil
+   Group    : toko sudah ditambah ke group docker
+
+✅ Postiz v2.11.3 dikonfigurasi
+   Folder   : /opt/postiz/
+   File     : docker-compose.yml (v2.11.3, tanpa Temporal)
+              .env (tidak dipakai — env langsung di compose)
+   Port     : 4007 (akses dari Windows: http://localhost:4007)
+   Storage  : local (/uploads)
+   DB       : postiz-postgres (PostgreSQL 17 alpine)
+   Cache    : postiz-redis (Redis 7.2)
+
+⏳ LANGKAH BERIKUTNYA (lanjut besok):
+   □ Jalankan: cd /opt/postiz && sudo docker compose up -d
+   □ Tunggu semua container ready
+   □ Buka browser Windows: http://localhost:4007
+   □ Buat akun Postiz (admin)
+   □ Connect Pinterest HAS_flo via OAuth
+   □ Install Hermes di WSL2
+   □ Setup Telegram Bot
+   □ Setup Windows Task Scheduler (6 tasks)
+
+CARA START WSL2 + POSTIZ BESOK:
+  1. Buka Ubuntu terminal
+  2. cd /opt/postiz
+  3. sudo docker compose up -d
+  4. Tunggu ~1-2 menit
+  5. Buka http://localhost:4007 di browser Windows
+
+CARA STOP:
+  1. Di Ubuntu: sudo docker compose down
+  2. ketik: exit
+  3. Di PowerShell: wsl --shutdown
+
+================================================================
+KEPUTUSAN TAMBAHAN (Juli 2026)
+================================================================
+
+- Postiz v2.12+ DITOLAK — Temporal stack terlalu berat (butuh 4-5GB RAM)
+- Postiz v2.11.3 DIPILIH — tanpa Temporal, hanya 3 container
+  RAM estimasi saat aktif: ~1.5GB (aman dalam limit WSL2 3GB)
+- Docker Desktop DITOLAK — pakai Docker Engine langsung di WSL2
+  Alasan: hemat ~1.3GB RAM dibanding Docker Desktop
+- Postiz aktif HANYA saat sesi posting (~30 menit/hari)
+  WSL2 start/stop otomatis via Windows Task Scheduler
+
+
+================================================================
+PROGRESS UPDATE — JULI 2026 (SESI LANJUTAN)
+================================================================
+
+OWNER/USERNAME : hasflo (bukan Hasna — koreksi dari memory lama)
+
+STATUS INSTALASI TERKINI:
+
+✅ WSL2 + Ubuntu terinstall
+   Username WSL2 : toko@HAFSA-ATEKA
+
+✅ WSL2 resource limit
+   memory=3GB, processors=2, swap=0
+
+✅ Docker Engine terinstall + verified
+
+✅ Postiz v2.11.3 terinstall di /opt/postiz/
+   Status : menunggu Pinterest API trial approved
+             (App secret key unavailable while trial pending)
+   Port   : http://localhost:4007
+
+✅ Hermes v0.19.0 terinstall
+   Provider  : Gemini (gemini-2.5-flash)
+   Telegram  : Bot terkonfigurasi
+   Tools     : file, terminal, cronjob, memory, skills,
+               web, vision, tts, code_execution, delegation
+   State DB  : bersih
+   python-telegram-bot : terinstall
+
+⏳ LANGKAH BERIKUTNYA:
+   □ Tulis SOUL.md Hermes (context HASflo)
+   □ Setup Windows Task Scheduler (6 tasks)
+   □ Connect Pinterest ke Postiz (tunggu API approved)
+   □ Buat Hermes skill: hasflo_post_pin
+   □ Buat Hermes skill: hasflo_keyword_update
+   □ Test end-to-end
+
+CARA START BESOK:
+   1. Buka Ubuntu
+   2. source ~/.bashrc
+   3. cd /opt/postiz && sudo docker compose up -d
+   4. hermes (untuk chat/test)
+   5. Buka http://localhost:4007 (Postiz dashboard)
+
+CARA STOP:
+   1. cd /opt/postiz && sudo docker compose down
+   2. exit
+   3. PowerShell Windows: wsl --shutdown
 
 ================================================================
