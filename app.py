@@ -71,6 +71,7 @@ with st.sidebar:
     st.link_button("🌸 HAS_flo Pinterest", "https://id.pinterest.com/HAS_flo/", use_container_width=True)
     st.link_button("🤖 ChatGPT", "https://chatgpt.com/", use_container_width=True)
     st.link_button("🛒 Shopee Affiliate Custom Link", "https://affiliate.shopee.co.id/offer/custom_link", use_container_width=True)
+    st.link_button("💾 GitHub Repo", "https://github.com/tokohafsa/hasflo-pin", use_container_width=True)
     st.divider()
 
 # ============================================================
@@ -257,10 +258,35 @@ st.caption("Generate prompt collage siap pakai untuk Midjourney, Gemini, atau Ch
 st.divider()
 
 # ============================================================
-# STEP 1 — INPUT URL GAMBAR
+# STEP 1 — LINK AFFILIATE SHOPEE (MANDATORY)
 # ============================================================
 
-st.header("Step 1 — Input URL Gambar Produk")
+st.header("Step 1 — 🔗 Link Affiliate Shopee")
+st.caption("Wajib diisi sebelum lanjut. Link ini akan disertakan di `deskripsi.txt` untuk agent Pinterest.")
+
+shopee_affiliate_link = st.text_input(
+    "Link affiliate Shopee:",
+    placeholder="https://shope.ee/xxxx atau link custom affiliate",
+    key="shopee_affiliate_link",
+)
+
+_affiliate_valid = bool(shopee_affiliate_link.strip())
+if _affiliate_valid:
+    st.success("✅ Link affiliate disimpan.")
+else:
+    st.warning("⚠️ Isi link affiliate dulu untuk melanjutkan ke step berikutnya.")
+
+st.divider()
+
+# ============================================================
+# STEP 2 — INPUT URL GAMBAR
+# ============================================================
+
+st.header("Step 2 — Input URL Gambar Produk")
+
+if not _affiliate_valid:
+    st.info("⬆️ Isi link affiliate di Step 1 dulu untuk melanjutkan.")
+    st.stop()
 
 # Tombol Clear — paling atas sebelum field URL
 if st.button("🗑️ Clear Semua — Input Baru", key="btn_clear_all"):
@@ -327,27 +353,10 @@ selected_canvas_key = canvas_key_options[canvas_labels.index(selected_canvas_lab
 st.divider()
 
 # ============================================================
-# STEP 1B — LINK AFFILIATE SHOPEE
+# STEP 3 — JUDUL PRODUK + CEK + GENERATE
 # ============================================================
 
-st.subheader("Step 1B — 🔗 Link Affiliate Shopee *(opsional)*")
-st.caption("Akan disertakan di deskripsi.txt dalam folder `ready_pin/` di Dropbox untuk agent Pinterest.")
-
-shopee_affiliate_link = st.text_input(
-    "Link affiliate Shopee:",
-    placeholder="https://shope.ee/xxxx atau link custom affiliate",
-    key="shopee_affiliate_link",
-)
-if shopee_affiliate_link.strip():
-    st.success("✅ Link affiliate disimpan.")
-
-st.divider()
-
-# ============================================================
-# STEP 2 — JUDUL PRODUK + CEK + GENERATE
-# ============================================================
-
-st.header("Step 2 — Judul Produk & Generate Title Pinterest")
+st.header("Step 3 — Judul Produk & Generate Title Pinterest")
 st.caption(
     "Isi judul produk dari Shopee, klik **Cek Judul** untuk deteksi tipe outfit, "
     "lalu pilih hijab/non-hijab untuk menentukan board."
@@ -374,7 +383,7 @@ if st.button("🔍 Cek Judul", disabled=not can_cek, key="btn_cek_judul"):
 if st.session_state.get("_judul_checked"):
 
     st.markdown("---")
-    st.subheader("Step 2B — Board & Section")
+    st.subheader("Step 3B — Board & Section")
 
     _pt_options = ["dress", "blouse", "tunik", "outer", "setelan"]
     _pt_default = st.session_state.get("_product_type_val", "dress")
@@ -512,13 +521,13 @@ Output HANYA JSON (tanpa markdown backtick):
 st.divider()
 
 # ============================================================
-# STEP 3 — CANVAS (sudah di Step 1, bagian ini info saja)
+# STEP 4 — MODEL REFERENCE
 # ============================================================
 
-st.header("Step 3 — Model Reference *(opsional)*")
+st.header("Step 4 — Model Reference *(opsional)*")
 st.caption(
     "Aktifkan untuk menyertakan gambar wajah/model sebagai referensi visual. "
-    "File model difilter otomatis berdasarkan pilihan Hijab/Non-Hijab di Step 2B."
+    "File model difilter otomatis berdasarkan pilihan Hijab/Non-Hijab di Step 3B."
 )
 
 _is_hijab_now = st.session_state.get("is_hijab", True)
@@ -567,7 +576,7 @@ st.divider()
 # STEP 4 — SUBJECT
 # ============================================================
 
-st.header("Step 4 — Deskripsi Subject")
+st.header("Step 5 — Deskripsi Subject")
 
 _age_options = ["18 years old", "25 years old", "33 years old"]
 
@@ -621,7 +630,7 @@ st.divider()
 # STEP 5 — PILIH LAYOUT
 # ============================================================
 
-st.header("Step 5 — Pilih Layout Collage")
+st.header("Step 6 — Pilih Layout Collage")
 st.caption("Pilih satu layout referensi collage.")
 
 if not LAYOUT_OPTIONS:
@@ -700,13 +709,13 @@ st.divider()
 # STEP 6 — GENERATE PROMPT
 # ============================================================
 
-st.header("Step 6 — Generate Prompt")
+st.header("Step 7 — Generate Prompt")
 
 n_ref_images = len(st.session_state.get("image_urls", []))
 can_generate = n_ref_images >= 1 and bool(LAYOUT_OPTIONS)
 
 if not can_generate:
-    st.warning("⚠️ Masukkan minimal 1 URL gambar di Step 1 untuk bisa generate prompt.")
+    st.warning("⚠️ Masukkan minimal 1 URL gambar di Step 2 untuk bisa generate prompt.")
 
 if st.button("✨ Generate Prompt", type="primary", disabled=not can_generate, key="gen_btn_main"):
     with st.spinner("Generating prompt..."):
@@ -734,7 +743,7 @@ if st.session_state.get("last_prompt_json"):
 
     st.success("✅ Prompt siap!")
     st.divider()
-    st.subheader("📋 Hasil Prompt")
+    st.subheader("📋 Step 8 — Hasil Prompt")
 
     has_title = (
         st.session_state.get("title_desc_done")
@@ -786,7 +795,7 @@ if st.session_state.get("last_prompt_json"):
     # STEP 7 — UPLOAD BAHAN PROMPT KE DROPBOX
     # ============================================================
 
-    st.header("Step 7 — Upload Bahan Prompt ke Dropbox")
+    st.header("Step 9 — Upload Bahan Prompt ke Dropbox")
     st.caption(
         "Fetch gambar outfit dari Shopee, build folder `bahan_prompt/`, "
         "lalu upload ke Dropbox. Setelah ini buka Dropbox → upload ke GPT → dapat hasil gambar."
@@ -925,19 +934,19 @@ if st.session_state.get("last_prompt_json"):
                 use_container_width=True,
                 type="primary",
             )
-            st.caption("Buka Dropbox → ambil file dari `bahan_prompt/` → upload ke ChatGPT → paste prompt.txt → balik ke sini untuk Step 8.")
+            st.caption("Buka Dropbox → ambil file dari `bahan_prompt/` → upload ke ChatGPT → paste prompt.txt → balik ke sini untuk Step 10.")
 
 # ============================================================
 # STEP 8 — UPLOAD HASIL GPT → READY PIN
 # ============================================================
 
 st.divider()
-st.header("Step 8 — Upload Hasil GPT & Kirim Ready Pin")
+st.header("Step 10 — Upload Hasil GPT & Kirim Ready Pin")
 
 _bahan_done = st.session_state.get("_bahan_uploaded", False)
 
 if not _bahan_done:
-    st.info("⬆️ Selesaikan Step 7 dulu (upload bahan prompt ke Dropbox).")
+    st.info("⬆️ Selesaikan Step 9 dulu (upload bahan prompt ke Dropbox).")
 else:
     _folder_name  = st.session_state.get("_folder_name", "")
     _outfit_files = st.session_state.get("_outfit_files", {})
@@ -962,57 +971,50 @@ else:
 
         _canvas = CANVAS_OPTIONS.get(selected_canvas_key, CANVAS_OPTIONS["1000x1500"])
 
-        # ── Preview slide order + toggle expand/crop per outfit ref ──
+        # ── Preview slide order ────────────────────────────────────
         st.markdown("**📋 Preview urutan slide carousel:**")
 
         # Slide 1 — hasil GPT (tidak diproses Pillow)
         st.markdown("**Slide 1 — Hasil GPT**")
         st.image(gpt_bytes, width=120)
-        st.caption("Upload as-is, tidak diproses Pillow.")
+        st.caption("Upload as-is.")
 
-        # Slide 2+ — outfit refs, dengan toggle expand/crop per slide
+        # Slide 2+ — outfit refs, radio di atas preview processed
         for idx, (ext, data) in sorted(_outfit_files.items()):
             st.markdown(f"**Slide {idx + 1} — Outfit Ref {idx}**")
-            col_prev, col_mode, col_result = st.columns([2, 2, 2])
 
-            with col_prev:
-                st.caption("Original")
-                st.image(data, use_container_width=True)
+            mode = st.radio(
+                "Mode:",
+                options=["expand", "crop"],
+                index=0,
+                key=f"slide_mode_{idx}",
+                format_func=lambda x: "📐 Expand (dominant fill)" if x == "expand" else "✂️ Crop (center crop)",
+                horizontal=True,
+            )
 
-            with col_mode:
-                mode = st.radio(
-                    "Mode Pillow:",
-                    options=["expand", "crop"],
-                    index=0,
-                    key=f"slide_mode_{idx}",
-                    format_func=lambda x: "📐 Expand (dominant fill)" if x == "expand" else "✂️ Crop (center crop)",
-                )
-
-            with col_result:
-                st.caption(f"Preview {'Expand' if mode == 'expand' else 'Crop'}")
-                try:
-                    if mode == "expand":
-                        preview = fit_to_canvas_dominant(data, _canvas["w"], _canvas["h"])
+            try:
+                if mode == "expand":
+                    preview = fit_to_canvas_dominant(data, _canvas["w"], _canvas["h"])
+                else:
+                    _img = Image.open(io.BytesIO(data)).convert("RGB")
+                    src_w, src_h = _img.size
+                    tgt_ratio = _canvas["w"] / _canvas["h"]
+                    src_ratio = src_w / src_h
+                    if src_ratio > tgt_ratio:
+                        new_w = int(src_h * tgt_ratio)
+                        left  = (src_w - new_w) // 2
+                        _img  = _img.crop((left, 0, left + new_w, src_h))
                     else:
-                        _img = Image.open(io.BytesIO(data)).convert("RGB")
-                        src_w, src_h = _img.size
-                        tgt_ratio = _canvas["w"] / _canvas["h"]
-                        src_ratio = src_w / src_h
-                        if src_ratio > tgt_ratio:
-                            new_w = int(src_h * tgt_ratio)
-                            left  = (src_w - new_w) // 2
-                            _img  = _img.crop((left, 0, left + new_w, src_h))
-                        else:
-                            new_h = int(src_w / tgt_ratio)
-                            top   = (src_h - new_h) // 2
-                            _img  = _img.crop((0, top, src_w, top + new_h))
-                        _img = _img.resize((_canvas["w"], _canvas["h"]), Image.LANCZOS)
-                        buf  = io.BytesIO()
-                        _img.save(buf, format="JPEG", quality=95)
-                        preview = buf.getvalue()
-                    st.image(preview, use_container_width=True)
-                except Exception as _e:
-                    st.caption(f"Preview error: {_e}")
+                        new_h = int(src_w / tgt_ratio)
+                        top   = (src_h - new_h) // 2
+                        _img  = _img.crop((0, top, src_w, top + new_h))
+                    _img = _img.resize((_canvas["w"], _canvas["h"]), Image.LANCZOS)
+                    buf  = io.BytesIO()
+                    _img.save(buf, format="JPEG", quality=95)
+                    preview = buf.getvalue()
+                st.image(preview, width=160)
+            except Exception as _e:
+                st.caption(f"Preview error: {_e}")
 
         st.markdown("---")
 

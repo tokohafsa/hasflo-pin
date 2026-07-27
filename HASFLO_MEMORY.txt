@@ -1,6 +1,6 @@
 ================================================================
 HASFLO PINTEREST — MEMORY LINTAS SESI
-Terakhir diupdate: Juli 2026
+Terakhir diupdate: Juli 2026 (app.py v3 — sidebar + step structure update)
 ================================================================
 
 PROJECT PATH  : G:\HASFLO_PINTEREST\
@@ -133,23 +133,41 @@ FILE RENCANA (belum dibuat):
 PIPELINE LENGKAP (Juli 2026)
 ================================================================
 
+SIDEBAR (app.py):
+  📌 Pinterest Pin Builder
+  🌸 HAS_flo Pinterest
+  🤖 ChatGPT
+  🛒 Shopee Affiliate Custom Link
+  💾 GitHub Repo                    ← dikembalikan di v3
+  [divider]
+  WIB timestamp
+
 JALUR A — CAROUSEL PIN (via Hermes + Postiz):
-  1. Input URL Shopee manual → paste di app.py Step 1
-  2. app.py Step 2: Gemini generate judul + deskripsi Pinterest
-     (judul: bebas kreatif ikut keyword trending dari seo_keywords.json)
-     (deskripsi kalimat 1: judul Shopee VERBATIM, tidak boleh diubah)
-     (deskripsi kalimat 2-dst: keyword trending dari seo_keywords.json)
-  3. app.py Step 3: pilih model reference (opsional, filter hijab/non-hijab)
-  4. app.py Step 4: deskripsi subject (usia, nationality, hijab/non-hijab)
-  5. app.py Step 5: pilih layout collage (JSON dari assets/)
-  6. app.py Step 6: generate prompt collage (build_prompt_json)
-  7. app.py Step 7: upload bahan_prompt/ ke Dropbox
-       → folder name: [ratio_prefix][nama_produk]_[tanggal]
-         contoh: [2x3]Dress_Wanita_Motif_Bunga_20260725
-  8. User: buka Dropbox → upload semua file ke GPT → dapat hasil collage
-  9. app.py Step 8: drag hasil GPT → upload ready_pin/ ke Dropbox
-       → app rename folder: [nama] → READY_[nama]
-       Struktur ready_pin/:
+  1.  app.py Step 1:  Link Affiliate Shopee — WAJIB DIISI (mandatory)
+        → validasi: kalau kosong, Step 2 ke bawah tidak muncul (st.stop())
+  2.  app.py Step 2:  Input URL gambar produk (manual paste)
+        → canvas size dipilih di sini
+  3.  app.py Step 3:  Judul produk & generate judul + deskripsi Pinterest via Gemini
+        (judul: bebas kreatif ikut keyword trending dari seo_keywords.json)
+        (deskripsi kalimat 1: judul Shopee VERBATIM, tidak boleh diubah)
+        (deskripsi kalimat 2-dst: keyword trending dari seo_keywords.json)
+  3B. app.py Step 3B: Board & Section (muncul setelah Cek Judul)
+        → deteksi tipe outfit, pilih hijab/non-hijab, auto-routing board
+  4.  app.py Step 4:  Model reference (opsional, filter hijab/non-hijab dari Step 3B)
+  5.  app.py Step 5:  Deskripsi subject (usia, nationality, hijab/non-hijab)
+  6.  app.py Step 6:  Pilih layout collage (JSON dari assets/)
+  7.  app.py Step 7:  Generate prompt collage (build_prompt_json)
+  8.  app.py Step 8:  Hasil prompt (tampil judul, deskripsi, prompt collage)
+  9.  app.py Step 9:  Upload bahan_prompt/ ke Dropbox
+        → folder name: [ratio_prefix][nama_produk]_[tanggal]
+          contoh: [2x3]Dress_Wanita_Motif_Bunga_20260725
+ 10.  User: buka Dropbox → upload semua file ke GPT → dapat hasil collage
+ 10. app.py Step 10: drag hasil GPT → preview per slide (expand/crop) → upload ready_pin/ ke Dropbox
+        → preview: langsung tampil versi processed (expand atau crop)
+        → radio switch expand/crop ada di atas setiap slide (per slide)
+        → tidak ada tampilan "original" — langsung versi final
+        → app rename folder: [nama] → READY_[nama]
+        Struktur ready_pin/:
          slides/slide1.jpg   ← hasil GPT
          image1.jpg          ← outfit ref 1
          image2.jpg          ← outfit ref 2 (dst)
@@ -179,8 +197,8 @@ DROPBOX STRUCTURE
     └── READY_[2x3]Dress_..._20260724/
 
 FOLDER NAMING CONVENTION:
-  Sebelum Step 8 : [ratio_prefix][nama_produk]_[tanggal]
-  Setelah Step 8 : READY_[ratio_prefix][nama_produk]_[tanggal]
+  Sebelum Step 10 : [ratio_prefix][nama_produk]_[tanggal]
+  Setelah Step 10 : READY_[ratio_prefix][nama_produk]_[tanggal]
   Setelah dipost : dipindah ke /HASflo/DONE/
 
 LOGIKA HERMES SCAN PER SESI:
@@ -288,7 +306,7 @@ SCRAPER — ABANDONED
 
 - Stealth patch tidak cukup untuk bypass Shopee login wall
 - KEPUTUSAN FINAL: scraping Shopee ditinggalkan selamanya
-- Input gambar: manual paste URL di Step 1 app.py
+- Input gambar: manual paste URL di Step 2 app.py
 
 ================================================================
 AGENT SYSTEM — HERMES + POSTIZ
@@ -384,7 +402,7 @@ ROADMAP TO-DO LIST
 ================================================================
 
 ✅ SELESAI:
-  - Streamlit app Step 1–8
+  - Streamlit app Step 1–10 (app.py)
   - Dropbox pipeline (bahan_prompt + ready_pin)
   - Layout JSON system
   - image_generator.py, title_desc_generator.py
@@ -394,13 +412,13 @@ ROADMAP TO-DO LIST
   - Memory diupdate
 
 ⏳ FASE 1 — Infrastructure (SEDANG BERJALAN):
-  □ Install WSL2 + Ubuntu di Windows
-  □ Install Docker Engine di WSL2
-  □ Install Postiz via Docker Compose di WSL2
-  □ Connect Pinterest HAS_flo ke Postiz (OAuth)
-  □ Install Hermes di WSL2
-  □ Setup Telegram Bot
-  □ Tulis SOUL.md Hermes
+  ✅ Install WSL2 + Ubuntu di Windows
+  ✅ Install Docker Engine di WSL2
+  ✅ Install Postiz via Docker Compose di WSL2
+  □ Connect Pinterest HAS_flo ke Postiz (tunggu API approved)
+  ✅ Install Hermes di WSL2
+  ✅ Setup Telegram Bot
+  ✅ Tulis SOUL.md Hermes
   □ Setup Windows Task Scheduler (6 tasks)
   □ Test health check script
   □ Test end-to-end satu sesi
@@ -552,9 +570,14 @@ STATUS INSTALASI TERKINI:
    State DB  : bersih
    python-telegram-bot : terinstall
 
+✅ SOUL.md Hermes selesai ditulis (context HASflo)
+
+⏳ MENUNGGU:
+   Pinterest API trial — menunggu approval
+   (App secret key unavailable while trial pending)
+   Connect Pinterest ke Postiz baru bisa dilakukan setelah approved
+
 ⏳ LANGKAH BERIKUTNYA:
-   □ Tulis SOUL.md Hermes (context HASflo)
-   □ Setup Windows Task Scheduler (6 tasks)
    □ Connect Pinterest ke Postiz (tunggu API approved)
    □ Buat Hermes skill: hasflo_post_pin
    □ Buat Hermes skill: hasflo_keyword_update
