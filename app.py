@@ -270,9 +270,11 @@ shopee_affiliate_link = st.text_input(
     key="shopee_affiliate_link",
 )
 
-_affiliate_valid = bool(shopee_affiliate_link.strip())
+_affiliate_clean = shopee_affiliate_link.strip().rstrip(".")
+_affiliate_valid = bool(_affiliate_clean)
 if _affiliate_valid:
     st.success("✅ Link affiliate disimpan.")
+    st.code(_affiliate_clean, language=None)
 else:
     st.warning("⚠️ Isi link affiliate dulu untuk melanjutkan ke step berikutnya.")
 
