@@ -266,15 +266,15 @@ st.caption("Wajib diisi sebelum lanjut. Link ini akan disertakan di `deskripsi.t
 
 shopee_affiliate_link = st.text_input(
     "Link affiliate Shopee:",
-    placeholder="https://shope.ee/xxxx atau link custom affiliate",
+    placeholder="https://shope.ee/xxxx atau https://s.shopee.co.id/xxx",
     key="shopee_affiliate_link",
 )
 
-_affiliate_clean = shopee_affiliate_link.strip().rstrip(".")
+_affiliate_clean = shopee_affiliate_link.strip().rstrip(".").split("?")[0]
 _affiliate_valid = bool(_affiliate_clean)
 if _affiliate_valid:
     st.success("✅ Link affiliate disimpan.")
-    st.code(_affiliate_clean, language=None)
+    st.markdown(f"[{_affiliate_clean}]({_affiliate_clean})")
 else:
     st.warning("⚠️ Isi link affiliate dulu untuk melanjutkan ke step berikutnya.")
 
@@ -1035,7 +1035,7 @@ else:
 
             title_pin      = st.session_state.get("title_edit", "").strip()
             desc_pin       = st.session_state.get("desc_edit", "").strip()
-            link_affiliate = st.session_state.get("shopee_affiliate_link", "").strip().rstrip(".")
+            link_affiliate = st.session_state.get("shopee_affiliate_link", "").strip().rstrip(".").split("?")[0]
             _board         = st.session_state.get("selected_board", BOARD_HIJAB)
             _section       = st.session_state.get("selected_section", "Dress")
             judul_asli     = st.session_state.get("judul_input_field", "").strip()
