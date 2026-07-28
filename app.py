@@ -556,7 +556,7 @@ if use_model_ref:
             options=MODEL_LIST,
             key="selected_model_name",
         )
-        model_exts = [".png", ".jpg", ".jpeg", ".webp"]
+        model_exts = [".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG", ".JPEG", ".WEBP"]
         model_preview_path = None
         if selected_model_name:
             for ext in model_exts:
@@ -876,7 +876,7 @@ if st.session_state.get("last_prompt_json"):
         step += 1
         if _use_model and _model_name:
             _prog.progress(int(step / total_steps * 100), text="Upload model reference...")
-            _model_exts = [".png", ".jpg", ".jpeg", ".webp"]
+            _model_exts = [".png", ".jpg", ".jpeg", ".webp", ".PNG", ".JPG", ".JPEG", ".WEBP"]
             _model_path = None
             for _ext in _model_exts:
                 _c = _os.path.join("assets/models", _model_name + _ext)
