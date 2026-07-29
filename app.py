@@ -36,10 +36,16 @@ def fit_to_canvas_dominant(img_bytes: bytes, canvas_w: int, canvas_h: int) -> by
         dominant  = tuple(palette[:3])
     except Exception:
         dominant  = (255, 255, 255)
-    img.thumbnail((canvas_w, canvas_h), Image.LANCZOS)
-    canvas   = Image.new("RGB", (canvas_w, canvas_h), dominant)
-    offset_x = (canvas_w - img.width) // 2
-    offset_y = (canvas_h - img.height) // 2
+    new_h = int(img.height * canvas_w / img.width)
+    if new_h > canvas_h:
+        img.thumbnail((canvas_w, canvas_h), Image.LANCZOS)
+        offset_x = (canvas_w - img.width) // 2
+        offset_y = (canvas_h - img.height) // 2
+    else:
+        img      = img.resize((canvas_w, new_h), Image.LANCZOS)
+        offset_x = 0
+        offset_y = (canvas_h - img.height) // 2
+    canvas = Image.new("RGB", (canvas_w, canvas_h), dominant)
     canvas.paste(img, (offset_x, offset_y))
     buf = io.BytesIO()
     canvas.save(buf, format="JPEG", quality=95)
