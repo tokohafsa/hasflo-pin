@@ -810,6 +810,9 @@ if st.session_state.get("last_prompt_json"):
         "lalu upload ke Dropbox. Setelah ini buka Dropbox → upload ke GPT → dapat hasil gambar."
     )
 
+    st.markdown("**📋 Copy Prompt:**")
+    st.code(prompt_dict["prompt"], language=None, wrap_lines=True)
+
     if st.button("☁️ Upload Bahan Prompt ke Dropbox", key="btn_upload_bahan", type="primary", use_container_width=True):
         import requests as _requests
         import os as _os
